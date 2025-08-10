@@ -1,0 +1,60 @@
+name: TIGOTÀ Elite Dashboard CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run tests
+      run: |
+        python -m pytest tests/ --verbose
+        
+    - name: Lint with black
+      run: |
+        black --check tigota_elite_dashboard.py
+        
+  build:
+    needs: test
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed --name="TIGOTA_Elite_Dashboard" --icon=immagini/logo_nfc.jpg --add-data="immagini;immagini" tigota_elite_dashboard.py
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: tigota-elite-dashboard
+        path: dist/

@@ -1,0 +1,2042 @@
+[
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T07:59:53.845263",
+    "data": "2025-08-07",
+    "ora": "07:59:53",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:00:19.858878",
+    "data": "2025-08-07",
+    "ora": "08:00:19",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:00:33.885726",
+    "data": "2025-08-07",
+    "ora": "08:00:33",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:00:39.883586",
+    "data": "2025-08-07",
+    "ora": "08:00:39",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:00:39.907067",
+    "data": "2025-08-07",
+    "ora": "08:00:39",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:00:51.908149",
+    "data": "2025-08-07",
+    "ora": "08:00:51",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:01:03.951745",
+    "data": "2025-08-07",
+    "ora": "08:01:03",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:01:25.936118",
+    "data": "2025-08-07",
+    "ora": "08:01:25",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:01:27.965015",
+    "data": "2025-08-07",
+    "ora": "08:01:27",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:01:29.985306",
+    "data": "2025-08-07",
+    "ora": "08:01:29",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:06:53.916607",
+    "data": "2025-08-07",
+    "ora": "08:06:53",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:09:25.093242",
+    "data": "2025-08-07",
+    "ora": "08:09:25",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:14:40.060928",
+    "data": "2025-08-07",
+    "ora": "08:14:40",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:23:24.910605",
+    "data": "2025-08-07",
+    "ora": "08:23:24",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:23:33.428760",
+    "data": "2025-08-07",
+    "ora": "08:23:33",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:36:13.771869",
+    "data": "2025-08-07",
+    "ora": "08:36:13",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:36:40.486192",
+    "data": "2025-08-07",
+    "ora": "08:36:40",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:36:42.572164",
+    "data": "2025-08-07",
+    "ora": "08:36:42",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:37:00.659266",
+    "data": "2025-08-07",
+    "ora": "08:37:00",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:37:04.748777",
+    "data": "2025-08-07",
+    "ora": "08:37:04",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:37:12.860252",
+    "data": "2025-08-07",
+    "ora": "08:37:12",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:37:46.947024",
+    "data": "2025-08-07",
+    "ora": "08:37:46",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:37:57.016188",
+    "data": "2025-08-07",
+    "ora": "08:37:57",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:38:25.093090",
+    "data": "2025-08-07",
+    "ora": "08:38:25",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:39:07.180572",
+    "data": "2025-08-07",
+    "ora": "08:39:07",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:39:43.289395",
+    "data": "2025-08-07",
+    "ora": "08:39:43",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:39:51.414565",
+    "data": "2025-08-07",
+    "ora": "08:39:51",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:39:55.535252",
+    "data": "2025-08-07",
+    "ora": "08:39:55",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:40:03.651872",
+    "data": "2025-08-07",
+    "ora": "08:40:03",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:40:35.733355",
+    "data": "2025-08-07",
+    "ora": "08:40:35",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:40:45.848006",
+    "data": "2025-08-07",
+    "ora": "08:40:45",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:41:01.935925",
+    "data": "2025-08-07",
+    "ora": "08:41:01",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:41:10.025806",
+    "data": "2025-08-07",
+    "ora": "08:41:10",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:41:18.169937",
+    "data": "2025-08-07",
+    "ora": "08:41:18",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:41:32.258229",
+    "data": "2025-08-07",
+    "ora": "08:41:32",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:41:36.381108",
+    "data": "2025-08-07",
+    "ora": "08:41:36",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:41:42.500230",
+    "data": "2025-08-07",
+    "ora": "08:41:42",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:41:52.595543",
+    "data": "2025-08-07",
+    "ora": "08:41:52",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:41:54.702091",
+    "data": "2025-08-07",
+    "ora": "08:41:54",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:42:20.883400",
+    "data": "2025-08-07",
+    "ora": "08:42:20",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:42:36.978398",
+    "data": "2025-08-07",
+    "ora": "08:42:36",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:42:39.097058",
+    "data": "2025-08-07",
+    "ora": "08:42:39",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:43:09.269732",
+    "data": "2025-08-07",
+    "ora": "08:43:09",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:43:39.421935",
+    "data": "2025-08-07",
+    "ora": "08:43:39",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:43:41.536188",
+    "data": "2025-08-07",
+    "ora": "08:43:41",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:43:57.672318",
+    "data": "2025-08-07",
+    "ora": "08:43:57",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:44:05.810441",
+    "data": "2025-08-07",
+    "ora": "08:44:05",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:44:17.959230",
+    "data": "2025-08-07",
+    "ora": "08:44:17",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:45:10.065710",
+    "data": "2025-08-07",
+    "ora": "08:45:10",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:45:20.186290",
+    "data": "2025-08-07",
+    "ora": "08:45:20",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:45:32.261045",
+    "data": "2025-08-07",
+    "ora": "08:45:32",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:45:36.388010",
+    "data": "2025-08-07",
+    "ora": "08:45:36",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:45:40.550719",
+    "data": "2025-08-07",
+    "ora": "08:45:40",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:45:42.625629",
+    "data": "2025-08-07",
+    "ora": "08:45:42",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:46:08.754904",
+    "data": "2025-08-07",
+    "ora": "08:46:08",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:46:14.848752",
+    "data": "2025-08-07",
+    "ora": "08:46:14",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:47:05.001660",
+    "data": "2025-08-07",
+    "ora": "08:47:05",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:47:23.110614",
+    "data": "2025-08-07",
+    "ora": "08:47:23",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:47:49.236868",
+    "data": "2025-08-07",
+    "ora": "08:47:49",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:48:07.330855",
+    "data": "2025-08-07",
+    "ora": "08:48:07",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:48:29.435369",
+    "data": "2025-08-07",
+    "ora": "08:48:29",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:48:31.541503",
+    "data": "2025-08-07",
+    "ora": "08:48:31",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:49:03.719826",
+    "data": "2025-08-07",
+    "ora": "08:49:03",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:49:09.834247",
+    "data": "2025-08-07",
+    "ora": "08:49:09",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:49:13.943990",
+    "data": "2025-08-07",
+    "ora": "08:49:13",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:49:20.052273",
+    "data": "2025-08-07",
+    "ora": "08:49:20",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:50:00.158791",
+    "data": "2025-08-07",
+    "ora": "08:50:00",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:50:04.278167",
+    "data": "2025-08-07",
+    "ora": "08:50:04",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:51:12.438010",
+    "data": "2025-08-07",
+    "ora": "08:51:12",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:51:50.622179",
+    "data": "2025-08-07",
+    "ora": "08:51:50",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:52:14.783825",
+    "data": "2025-08-07",
+    "ora": "08:52:14",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:52:30.871534",
+    "data": "2025-08-07",
+    "ora": "08:52:30",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:52:39.014883",
+    "data": "2025-08-07",
+    "ora": "08:52:39",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:52:57.153199",
+    "data": "2025-08-07",
+    "ora": "08:52:57",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:53:33.261708",
+    "data": "2025-08-07",
+    "ora": "08:53:33",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:53:41.365728",
+    "data": "2025-08-07",
+    "ora": "08:53:41",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:54:01.495543",
+    "data": "2025-08-07",
+    "ora": "08:54:01",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:54:05.640193",
+    "data": "2025-08-07",
+    "ora": "08:54:05",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:54:19.768402",
+    "data": "2025-08-07",
+    "ora": "08:54:19",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:54:27.882903",
+    "data": "2025-08-07",
+    "ora": "08:54:27",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:54:45.970781",
+    "data": "2025-08-07",
+    "ora": "08:54:45",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:55:10.061968",
+    "data": "2025-08-07",
+    "ora": "08:55:10",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:55:24.186612",
+    "data": "2025-08-07",
+    "ora": "08:55:24",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:55:26.300140",
+    "data": "2025-08-07",
+    "ora": "08:55:26",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:56:00.439128",
+    "data": "2025-08-07",
+    "ora": "08:56:00",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:56:26.567915",
+    "data": "2025-08-07",
+    "ora": "08:56:26",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:56:46.666285",
+    "data": "2025-08-07",
+    "ora": "08:56:46",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T08:56:54.771353",
+    "data": "2025-08-07",
+    "ora": "08:56:54",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:57:18.889439",
+    "data": "2025-08-07",
+    "ora": "08:57:18",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:58:05.027960",
+    "data": "2025-08-07",
+    "ora": "08:58:05",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:58:31.150847",
+    "data": "2025-08-07",
+    "ora": "08:58:31",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:58:41.273280",
+    "data": "2025-08-07",
+    "ora": "08:58:41",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T08:58:51.367437",
+    "data": "2025-08-07",
+    "ora": "08:58:51",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:59:09.458457",
+    "data": "2025-08-07",
+    "ora": "08:59:09",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T08:59:25.575727",
+    "data": "2025-08-07",
+    "ora": "08:59:25",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T08:59:43.682623",
+    "data": "2025-08-07",
+    "ora": "08:59:43",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:01:29.833498",
+    "data": "2025-08-07",
+    "ora": "09:01:29",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:01:37.904430",
+    "data": "2025-08-07",
+    "ora": "09:01:37",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:02:03.975484",
+    "data": "2025-08-07",
+    "ora": "09:02:03",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:02:06.049415",
+    "data": "2025-08-07",
+    "ora": "09:02:06",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:02:10.149896",
+    "data": "2025-08-07",
+    "ora": "09:02:10",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:02:46.215212",
+    "data": "2025-08-07",
+    "ora": "09:02:46",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:02:56.295174",
+    "data": "2025-08-07",
+    "ora": "09:02:56",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:03:34.384979",
+    "data": "2025-08-07",
+    "ora": "09:03:34",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:03:38.485151",
+    "data": "2025-08-07",
+    "ora": "09:03:38",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:03:40.561248",
+    "data": "2025-08-07",
+    "ora": "09:03:40",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:03:44.672025",
+    "data": "2025-08-07",
+    "ora": "09:03:44",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:03:56.779969",
+    "data": "2025-08-07",
+    "ora": "09:03:56",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:04:04.899353",
+    "data": "2025-08-07",
+    "ora": "09:04:04",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:04:14.973573",
+    "data": "2025-08-07",
+    "ora": "09:04:14",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:04:21.050299",
+    "data": "2025-08-07",
+    "ora": "09:04:21",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:04:37.129476",
+    "data": "2025-08-07",
+    "ora": "09:04:37",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:04:45.195435",
+    "data": "2025-08-07",
+    "ora": "09:04:45",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:04:59.268849",
+    "data": "2025-08-07",
+    "ora": "09:04:59",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:05:01.368398",
+    "data": "2025-08-07",
+    "ora": "09:05:01",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:05:27.542119",
+    "data": "2025-08-07",
+    "ora": "09:05:27",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:05:45.687245",
+    "data": "2025-08-07",
+    "ora": "09:05:45",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:05:55.839083",
+    "data": "2025-08-07",
+    "ora": "09:05:55",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:05:57.973739",
+    "data": "2025-08-07",
+    "ora": "09:05:57",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:06:02.210197",
+    "data": "2025-08-07",
+    "ora": "09:06:02",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:07:55.802468",
+    "data": "2025-08-07",
+    "ora": "09:07:55",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:08:40.460566",
+    "data": "2025-08-07",
+    "ora": "09:08:40",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:09:18.613356",
+    "data": "2025-08-07",
+    "ora": "09:09:18",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:09:32.393082",
+    "data": "2025-08-07",
+    "ora": "09:09:32",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:11:20.439869",
+    "data": "2025-08-07",
+    "ora": "09:11:20",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:13:28.914070",
+    "data": "2025-08-07",
+    "ora": "09:13:28",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:13:36.987875",
+    "data": "2025-08-07",
+    "ora": "09:13:36",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:13:52.998590",
+    "data": "2025-08-07",
+    "ora": "09:13:52",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:14:07.015428",
+    "data": "2025-08-07",
+    "ora": "09:14:07",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:14:23.046462",
+    "data": "2025-08-07",
+    "ora": "09:14:23",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:14:27.054516",
+    "data": "2025-08-07",
+    "ora": "09:14:27",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:14:49.080408",
+    "data": "2025-08-07",
+    "ora": "09:14:49",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:15:17.101058",
+    "data": "2025-08-07",
+    "ora": "09:15:17",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:15:31.121875",
+    "data": "2025-08-07",
+    "ora": "09:15:31",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:16:05.144280",
+    "data": "2025-08-07",
+    "ora": "09:16:05",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:16:07.152879",
+    "data": "2025-08-07",
+    "ora": "09:16:07",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:16:13.162324",
+    "data": "2025-08-07",
+    "ora": "09:16:13",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:16:17.171711",
+    "data": "2025-08-07",
+    "ora": "09:16:17",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:16:19.188713",
+    "data": "2025-08-07",
+    "ora": "09:16:19",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:16:33.208450",
+    "data": "2025-08-07",
+    "ora": "09:16:33",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:16:59.227734",
+    "data": "2025-08-07",
+    "ora": "09:16:59",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:17:35.251010",
+    "data": "2025-08-07",
+    "ora": "09:17:35",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:17:51.295012",
+    "data": "2025-08-07",
+    "ora": "09:17:51",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:18:09.310575",
+    "data": "2025-08-07",
+    "ora": "09:18:09",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:18:19.321899",
+    "data": "2025-08-07",
+    "ora": "09:18:19",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:18:23.332053",
+    "data": "2025-08-07",
+    "ora": "09:18:23",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:18:41.354002",
+    "data": "2025-08-07",
+    "ora": "09:18:41",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:18:53.366876",
+    "data": "2025-08-07",
+    "ora": "09:18:53",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:18:55.377445",
+    "data": "2025-08-07",
+    "ora": "09:18:55",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:19:31.412048",
+    "data": "2025-08-07",
+    "ora": "09:19:31",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:19:33.425592",
+    "data": "2025-08-07",
+    "ora": "09:19:33",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:20:09.462943",
+    "data": "2025-08-07",
+    "ora": "09:20:09",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:20:15.480738",
+    "data": "2025-08-07",
+    "ora": "09:20:15",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:20:19.495465",
+    "data": "2025-08-07",
+    "ora": "09:20:19",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:20:33.532171",
+    "data": "2025-08-07",
+    "ora": "09:20:33",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:20:47.550576",
+    "data": "2025-08-07",
+    "ora": "09:20:47",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:20:51.565111",
+    "data": "2025-08-07",
+    "ora": "09:20:51",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:21:03.575049",
+    "data": "2025-08-07",
+    "ora": "09:21:03",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:21:15.590331",
+    "data": "2025-08-07",
+    "ora": "09:21:15",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:21:31.606935",
+    "data": "2025-08-07",
+    "ora": "09:21:31",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:21:39.621572",
+    "data": "2025-08-07",
+    "ora": "09:21:39",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:22:01.647128",
+    "data": "2025-08-07",
+    "ora": "09:22:01",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:22:37.693140",
+    "data": "2025-08-07",
+    "ora": "09:22:37",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:22:43.707649",
+    "data": "2025-08-07",
+    "ora": "09:22:43",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:22:45.717904",
+    "data": "2025-08-07",
+    "ora": "09:22:45",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:22:55.731615",
+    "data": "2025-08-07",
+    "ora": "09:22:55",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:23:15.747396",
+    "data": "2025-08-07",
+    "ora": "09:23:15",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:23:23.764481",
+    "data": "2025-08-07",
+    "ora": "09:23:23",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:24:11.798320",
+    "data": "2025-08-07",
+    "ora": "09:24:11",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:24:21.809729",
+    "data": "2025-08-07",
+    "ora": "09:24:21",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:24:25.820865",
+    "data": "2025-08-07",
+    "ora": "09:24:25",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:24:37.833020",
+    "data": "2025-08-07",
+    "ora": "09:24:37",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:24:57.851698",
+    "data": "2025-08-07",
+    "ora": "09:24:57",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:25:03.861885",
+    "data": "2025-08-07",
+    "ora": "09:25:03",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:27:06.861945",
+    "data": "2025-08-07",
+    "ora": "09:27:06",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:27:16.896509",
+    "data": "2025-08-07",
+    "ora": "09:27:16",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:27:32.908307",
+    "data": "2025-08-07",
+    "ora": "09:27:32",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:27:46.978465",
+    "data": "2025-08-07",
+    "ora": "09:27:46",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:28:31.000921",
+    "data": "2025-08-07",
+    "ora": "09:28:31",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:29:21.029627",
+    "data": "2025-08-07",
+    "ora": "09:29:21",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:30:01.052846",
+    "data": "2025-08-07",
+    "ora": "09:30:01",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:30:19.066101",
+    "data": "2025-08-07",
+    "ora": "09:30:19",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:30:25.079759",
+    "data": "2025-08-07",
+    "ora": "09:30:25",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:30:31.094549",
+    "data": "2025-08-07",
+    "ora": "09:30:31",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:30:41.112787",
+    "data": "2025-08-07",
+    "ora": "09:30:41",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:31:23.140618",
+    "data": "2025-08-07",
+    "ora": "09:31:23",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:31:43.167521",
+    "data": "2025-08-07",
+    "ora": "09:31:43",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:31:49.181586",
+    "data": "2025-08-07",
+    "ora": "09:31:49",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:31:57.192791",
+    "data": "2025-08-07",
+    "ora": "09:31:57",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:32:09.212349",
+    "data": "2025-08-07",
+    "ora": "09:32:09",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:32:33.242887",
+    "data": "2025-08-07",
+    "ora": "09:32:33",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:32:55.261120",
+    "data": "2025-08-07",
+    "ora": "09:32:55",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:33:33.304213",
+    "data": "2025-08-07",
+    "ora": "09:33:33",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:35:01.343177",
+    "data": "2025-08-07",
+    "ora": "09:35:01",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:35:07.353748",
+    "data": "2025-08-07",
+    "ora": "09:35:07",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:35:41.377773",
+    "data": "2025-08-07",
+    "ora": "09:35:41",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:36:07.402935",
+    "data": "2025-08-07",
+    "ora": "09:36:07",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:36:27.424900",
+    "data": "2025-08-07",
+    "ora": "09:36:27",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:37:03.473904",
+    "data": "2025-08-07",
+    "ora": "09:37:03",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:37:39.502122",
+    "data": "2025-08-07",
+    "ora": "09:37:39",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:37:49.529787",
+    "data": "2025-08-07",
+    "ora": "09:37:49",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:38:03.543505",
+    "data": "2025-08-07",
+    "ora": "09:38:03",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:38:23.571368",
+    "data": "2025-08-07",
+    "ora": "09:38:23",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:38:37.587850",
+    "data": "2025-08-07",
+    "ora": "09:38:37",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:39:35.620429",
+    "data": "2025-08-07",
+    "ora": "09:39:35",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:39:37.635369",
+    "data": "2025-08-07",
+    "ora": "09:39:37",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:39:51.649729",
+    "data": "2025-08-07",
+    "ora": "09:39:51",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:39:59.670012",
+    "data": "2025-08-07",
+    "ora": "09:39:59",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:40:57.704013",
+    "data": "2025-08-07",
+    "ora": "09:40:57",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:41:21.728722",
+    "data": "2025-08-07",
+    "ora": "09:41:21",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:41:41.747581",
+    "data": "2025-08-07",
+    "ora": "09:41:41",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:41:55.768741",
+    "data": "2025-08-07",
+    "ora": "09:41:55",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:42:23.789817",
+    "data": "2025-08-07",
+    "ora": "09:42:23",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:42:27.799967",
+    "data": "2025-08-07",
+    "ora": "09:42:27",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:42:39.851269",
+    "data": "2025-08-07",
+    "ora": "09:42:39",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:42:57.876395",
+    "data": "2025-08-07",
+    "ora": "09:42:57",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:43:27.899495",
+    "data": "2025-08-07",
+    "ora": "09:43:27",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:44:57.941417",
+    "data": "2025-08-07",
+    "ora": "09:44:57",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:45:03.951436",
+    "data": "2025-08-07",
+    "ora": "09:45:03",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:45:41.976453",
+    "data": "2025-08-07",
+    "ora": "09:45:41",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:45:43.993716",
+    "data": "2025-08-07",
+    "ora": "09:45:43",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:45:58.012093",
+    "data": "2025-08-07",
+    "ora": "09:45:58",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:46:02.030344",
+    "data": "2025-08-07",
+    "ora": "09:46:02",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:46:18.135748",
+    "data": "2025-08-07",
+    "ora": "09:46:18",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:46:24.152141",
+    "data": "2025-08-07",
+    "ora": "09:46:24",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:46:26.162754",
+    "data": "2025-08-07",
+    "ora": "09:46:26",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:46:50.186809",
+    "data": "2025-08-07",
+    "ora": "09:46:50",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:47:10.228410",
+    "data": "2025-08-07",
+    "ora": "09:47:10",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:47:50.270676",
+    "data": "2025-08-07",
+    "ora": "09:47:50",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:47:56.290377",
+    "data": "2025-08-07",
+    "ora": "09:47:56",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:48:02.306261",
+    "data": "2025-08-07",
+    "ora": "09:48:02",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:48:08.332882",
+    "data": "2025-08-07",
+    "ora": "09:48:08",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:48:14.352363",
+    "data": "2025-08-07",
+    "ora": "09:48:14",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:48:22.364128",
+    "data": "2025-08-07",
+    "ora": "09:48:22",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:48:30.375833",
+    "data": "2025-08-07",
+    "ora": "09:48:30",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:48:48.391961",
+    "data": "2025-08-07",
+    "ora": "09:48:48",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:49:02.405458",
+    "data": "2025-08-07",
+    "ora": "09:49:02",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:49:38.436964",
+    "data": "2025-08-07",
+    "ora": "09:49:38",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:49:44.449330",
+    "data": "2025-08-07",
+    "ora": "09:49:44",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T09:50:02.467169",
+    "data": "2025-08-07",
+    "ora": "09:50:02",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T09:57:16.831467",
+    "data": "2025-08-07",
+    "ora": "09:57:16",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:57:26.932216",
+    "data": "2025-08-07",
+    "ora": "09:57:26",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T09:57:40.981059",
+    "data": "2025-08-07",
+    "ora": "09:57:40",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T09:58:05.062934",
+    "data": "2025-08-07",
+    "ora": "09:58:05",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T10:02:19.616305",
+    "data": "2025-08-07",
+    "ora": "10:02:19",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T10:02:21.737889",
+    "data": "2025-08-07",
+    "ora": "10:02:21",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T10:02:25.750566",
+    "data": "2025-08-07",
+    "ora": "10:02:25",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T10:02:47.814430",
+    "data": "2025-08-07",
+    "ora": "10:02:47",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T10:18:28.887318",
+    "data": "2025-08-07",
+    "ora": "10:18:28",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T10:18:37.000706",
+    "data": "2025-08-07",
+    "ora": "10:18:37",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T10:18:53.073987",
+    "data": "2025-08-07",
+    "ora": "10:18:53",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE003",
+    "timestamp": "2025-08-07T10:19:01.089200",
+    "data": "2025-08-07",
+    "ora": "10:19:01",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE001",
+    "timestamp": "2025-08-07T10:19:13.124514",
+    "data": "2025-08-07",
+    "ora": "10:19:13",
+    "tipo_movimento": "USCITA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE004",
+    "timestamp": "2025-08-07T10:19:15.147233",
+    "data": "2025-08-07",
+    "ora": "10:19:15",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  },
+  {
+    "badge_id": "BADGE002",
+    "timestamp": "2025-08-07T10:19:37.163505",
+    "data": "2025-08-07",
+    "ora": "10:19:37",
+    "tipo_movimento": "ENTRATA",
+    "tipo_registrazione": "AUTO"
+  }
+]
