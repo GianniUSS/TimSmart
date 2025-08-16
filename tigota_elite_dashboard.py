@@ -59,6 +59,8 @@ class TigotaEliteDashboard:
         # Scheduler trasferimento TXT
         self._transfer_thread = None
         self._transfer_stop = threading.Event()
+        # Feedback toast duration (ms), overridable via config [UI] feedback_toast_ms
+        self.feedback_toast_ms = 2000
 
         # Design tokens per interfaccia professionale moderna
         self.design_tokens = {
@@ -1642,6 +1644,7 @@ class TigotaEliteDashboard:
                             self.selection_hint_var.set("Seleziona Ingresso o Uscita prima di timbrare")
                             if hasattr(self, 'selection_hint_label') and self.selection_hint_label is not None:
                                 self.selection_hint_label.config(fg='#EF4444')
+                            self._show_tigota_toast('warning', 'Seleziona Ingresso o Uscita')
                             try:
                                 winsound.Beep(440, 220)
                             except Exception:
@@ -1674,6 +1677,9 @@ class TigotaEliteDashboard:
                                     db.save_timbratura(badge_id, tipo_str, dip_nome, dip_cognome)
                             except Exception as se:
                                 print(f"[DB] Errore salvataggio timbratura: {se}")
+                            # Toast stile TIGOTÀ (success)
+                            display_name = nominativo if nominativo else None
+                            self._show_tigota_toast('success', f"{azione} registrata", name=display_name)
                         else:
                             # Badge non riconosciuto: mostra messaggio di attenzione in rosso
                             self.selection_hint_var.set("Attenzione: badge non riconosciuto")
@@ -1693,6 +1699,8 @@ class TigotaEliteDashboard:
                                     db.save_timbratura(badge_id, tipo_str, None, None)
                             except Exception as se:
                                 print(f"[DB] Errore salvataggio timbratura (unknown badge): {se}")
+                            # Toast stile TIGOTÀ (errore)
+                            self._show_tigota_toast('error', "Badge non riconosciuto")
                 except Exception:
                     pass
                 # Ferma lettore dopo una lettura per evitare duplicati rapidi
@@ -1705,6 +1713,11 @@ class TigotaEliteDashboard:
                 # Disattiva cattura tastiera
                 try:
                     self._stop_keyboard_capture()
+                except Exception:
+                    pass
+                # Richiedi nuova selezione (Ingresso/Uscita) per riabilitare la lettura
+                try:
+                    self._post_timbratura_cleanup()
                 except Exception:
                     pass
             if hasattr(self, 'root') and self.root:
@@ -1818,6 +1831,109 @@ class TigotaEliteDashboard:
         self.kiosk_exit_pin = self.kiosk_exit_pin or "2580"
         # Flag tablet per font/padding maggiorati
         self.is_tablet_resolution = True
+
+    # --- UI feedback helpers ---
+    def _get_feedback_duration_ms(self) -> int:
+        """Legge durata toast da config_negozio.ini [UI] feedback_toast_ms, fallback a self.feedback_toast_ms."""
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+        except Exception:
+            base_dir = '.'
+        cfg_path = os.path.join(base_dir, 'config_negozio.ini')
+        import configparser as _cp
+        cfg = _cp.ConfigParser()
+        try:
+            cfg.read(cfg_path, encoding='utf-8')
+        except Exception:
+            cfg.read(cfg_path)
+        try:
+            if cfg.has_section('UI'):
+                v = cfg.get('UI', 'feedback_toast_ms', fallback=str(self.feedback_toast_ms)).strip()
+                iv = int(v)
+                if iv <= 0:
+                    return self.feedback_toast_ms
+                return min(iv, 10000)
+        except Exception:
+            pass
+        return self.feedback_toast_ms
+
+    def _show_tigota_toast(self, kind, text, duration_ms=None, name=None):
+        """Mostra un toast stile TIGOTÀ (borderless, topmost), ancora più grande, con saluto opzionale e bordo Uscita."""
+        if not hasattr(self, 'root') or not self.root:
+            return
+        dur = duration_ms if isinstance(duration_ms, int) and duration_ms > 0 else self._get_feedback_duration_ms()
+        # Palette
+        ok_bg = '#20B2AA'   # success
+        warn = '#F59E0B'
+        err = '#E91E63'
+        header_bg = ok_bg if kind == 'success' else (warn if kind == 'warning' else err)
+        body_bg = '#FFFFFF'
+        fg = '#FFFFFF'
+
+        # Finestra
+        toast = tk.Toplevel(self.root)
+        try:
+            toast.overrideredirect(True)
+        except Exception:
+            pass
+        try:
+            toast.attributes('-topmost', True)
+        except Exception:
+            pass
+
+        # Bordi con colore pulsante Uscita
+        uscita_border = '#E91E63'
+        toast.configure(bg=uscita_border)
+
+        s = self.s
+        # Card interna con padding (bordo visibile tutto intorno)
+        container = tk.Frame(toast, bg=body_bg, bd=0, highlightthickness=0)
+        container.pack(fill='both', expand=True, padx=s(12), pady=s(12))
+
+        header = tk.Frame(container, bg=header_bg, bd=0, highlightthickness=0)
+        header.pack(fill='x')
+        tk.Label(header, text='TIGOTÀ', font=('Segoe UI', s(34), 'bold'), fg=fg, bg=header_bg, padx=s(28), pady=s(16)).pack(anchor='w')
+
+        body = tk.Frame(container, bg=body_bg)
+        body.pack(fill='both', expand=True, padx=s(36), pady=s(26))
+        if name:
+            tk.Label(body, text=f"Ciao {name}", font=('Segoe UI', s(42), 'bold'), fg='#111827', bg=body_bg).pack(pady=(0, s(8)))
+        tk.Label(body, text=text, font=('Segoe UI', s(30), 'bold'), fg='#374151', bg=body_bg).pack()
+
+        # Centro schermo
+        try:
+            toast.update_idletasks()
+            rw = max(800, self.root.winfo_width())
+            w = max(int(rw * 0.65), s(800), toast.winfo_width())
+            h = toast.winfo_height()
+            rx = self.root.winfo_rootx(); ry = self.root.winfo_rooty()
+            rh = self.root.winfo_height()
+            x = rx + (rw - w)//2
+            y = ry + (rh - h)//2
+            toast.geometry(f"{w}x{h}+{max(0,x)}+{max(0,y)}")
+        except Exception:
+            pass
+        toast.after(dur, lambda: toast.destroy() if toast.winfo_exists() else None)
+
+    def _post_timbratura_cleanup(self):
+        """Dopo una timbratura, richiede una nuova selezione azzerando lo stato e lasciando la lettura NFC disabilitata."""
+        # Pulisci selezione
+        try:
+            self.selected_action = None
+            if hasattr(self, 'btn_ingresso') and self.btn_ingresso:
+                self.btn_ingresso['set_selected'](False)
+            if hasattr(self, 'btn_uscita') and self.btn_uscita:
+                self.btn_uscita['set_selected'](False)
+        except Exception:
+            pass
+        # Messaggio istruzioni
+        try:
+            if hasattr(self, 'selection_hint_var') and self.selection_hint_var is not None:
+                self.selection_hint_var.set('Seleziona Ingresso o Uscita per abilitare la lettura')
+            if hasattr(self, 'selection_hint_label') and self.selection_hint_label is not None:
+                self.selection_hint_label.config(fg='#5FA8AF')
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     import tkinter as tk
