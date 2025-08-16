@@ -23,6 +23,7 @@ class NFCReader:
         self.callback = callback
         self.is_reading = False
         self.reader_thread = None
+        self._stop_event = threading.Event()
         
         # Modalità simulazione per test (da config)
         from config_tablet import NFC_CONFIG
@@ -41,31 +42,36 @@ class NFCReader:
         
     def start_reading(self):
         """Avvia la lettura NFC in background"""
-        if not self.is_reading:
-            self.is_reading = True
-            self.reader_thread = threading.Thread(target=self._read_loop, daemon=True)
-            self.reader_thread.start()
-            
-            if self.simulation_mode:
-                print("🔄 Lettore NFC avviato (hardware disabilitato)")
-                print("   � Collega lettore hardware per funzionamento")
-            else:
-                print("🔄 Lettore NFC hardware avviato")
+        if self.is_reading and self.reader_thread and self.reader_thread.is_alive():
+            # Già in lettura
+            return
+        self.is_reading = True
+        self._stop_event.clear()
+        self.reader_thread = threading.Thread(target=self._read_loop, daemon=True)
+        self.reader_thread.start()
+        
+        if self.simulation_mode:
+            print("🔄 Lettore NFC avviato (hardware disabilitato)")
+            print("   � Collega lettore hardware per funzionamento")
+        else:
+            print("🔄 Lettore NFC hardware avviato")
             
     def stop_reading(self):
         """Ferma la lettura NFC"""
         self.is_reading = False
-        if self.reader_thread:
-            self.reader_thread.join(timeout=1)
-        print("🔒 Lettore NFC fermato")
+        # Notifica lo stop al thread senza bloccare l'UI
+        self._stop_event.set()
+        # Non fare join bloccanti nel thread UI; il thread è daemon e si fermerà da solo
+        print("🔒 Lettore NFC fermato (non-bloccante)")
             
     def _read_loop(self):
         """Loop principale per la lettura NFC"""
         try:
-            while self.is_reading:
+            while self.is_reading and not self._stop_event.is_set():
                 if self.simulation_mode:
                     # MODALITÀ SIMULAZIONE DISABILITATA - NO DEMO AUTOMATICHE
-                    time.sleep(1)
+                    # Usa wait così lo stop è immediato
+                    self._stop_event.wait(0.5)
                     # RIMOSSO: Nessuna simulazione automatica
                     # Il sistema attende solo letture hardware reali
                             
@@ -77,10 +83,10 @@ class NFCReader:
                         self.callback(badge_data)
                         
                         # Pausa dopo lettura per evitare duplicati
-                        time.sleep(2)
+                        self._stop_event.wait(2.0)
                     else:
                         # Attesa breve se nessun badge rilevato
-                        time.sleep(0.5)
+                        self._stop_event.wait(0.2)
                     
         except Exception as e:
             print(f"❌ Errore nel loop NFC: {e}")

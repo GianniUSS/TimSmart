@@ -80,3 +80,13 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
+# Project archive (moved artifacts, builds, samples)
+# Intera cartella archivio esclusa
+_archivio/
+
+# Dati di produzione locali (Windows ProgramData)
+*.json
+export/
+backup/
+logs/

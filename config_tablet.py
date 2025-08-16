@@ -164,6 +164,21 @@ CREATE TABLE IF NOT EXISTS timbrature (
 CREATE INDEX IF NOT EXISTS idx_badge_timestamp ON timbrature(badge_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_sync_status ON timbrature(sync_status);
 CREATE INDEX IF NOT EXISTS idx_date ON timbrature(DATE(timestamp));
+
+-- Anagrafica dipendenti con abbinamento badge NFC
+CREATE TABLE IF NOT EXISTS dipendenti (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codice TEXT NOT NULL UNIQUE,                     -- Codice dipendente (univoco)
+    nome TEXT NOT NULL,                              -- Nome
+    cognome TEXT,                                    -- Cognome facoltativo
+    badge_id TEXT UNIQUE,                            -- Codice badge NFC (univoco, può essere NULL fino ad abbinamento)
+    attivo INTEGER DEFAULT 1,                        -- Flag attivo
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dipendenti_codice ON dipendenti(codice);
+CREATE INDEX IF NOT EXISTS idx_dipendenti_badge ON dipendenti(badge_id);
 """
 
 # Configurazione per diversi ambienti

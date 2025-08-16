@@ -180,6 +180,24 @@ class TigotaSQLiteManager:
         except Exception as e:
             self.logger.error(f"Errore verifica integrità: {e}")
             return False
+
+    # --- Normalizzazione/validazione campi anagrafica ---
+    def _normalize_codice(self, codice: Optional[str]) -> Optional[str]:
+        """
+        Rende il codice composto solo da cifre e ne applica il vincolo di max 10 cifre.
+        Ritorna None se vuoto/non valido.
+        """
+        try:
+            if not codice:
+                return None
+            s = ''.join(ch for ch in str(codice).strip() if ch.isdigit())
+            if not s:
+                return None
+            if len(s) > 10:
+                return None
+            return s
+        except Exception:
+            return None
     
     def save_timbratura(self, badge_id: str, tipo: str, nome: str = None, cognome: str = None) -> bool:
         """
@@ -279,6 +297,35 @@ class TigotaSQLiteManager:
         except Exception as e:
             self.logger.error(f"Errore lettura ultima timbratura badge {badge_id}: {e}")
             return None
+
+    def get_timbrature_pending(self) -> List[Dict]:
+        """Ritorna timbrature con sync_status='pending' ordinate per timestamp"""
+        try:
+            with self._get_db_connection() as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT * FROM timbrature WHERE sync_status = 'pending' ORDER BY timestamp
+                """)
+                rows = cur.fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            self.logger.error(f"Errore get_timbrature_pending: {e}")
+            return []
+
+    def mark_timbrature_synced(self, ids: List[int]) -> bool:
+        """Imposta sync_status='synced' alle timbrature con id nella lista."""
+        if not ids:
+            return True
+        try:
+            with self._get_db_connection() as conn:
+                cur = conn.cursor()
+                q = f"UPDATE timbrature SET sync_status='synced', updated_at=CURRENT_TIMESTAMP WHERE id IN ({','.join(['?']*len(ids))})"
+                cur.execute(q, ids)
+                conn.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"Errore mark_timbrature_synced: {e}")
+            return False
     
     def get_timbrature_range(self, start_date: datetime, end_date: datetime) -> List[Dict]:
         """Ottiene timbrature in un range di date"""
@@ -522,6 +569,90 @@ class TigotaSQLiteManager:
         except Exception as e:
             self.logger.error(f"Errore statistiche database: {e}")
             return {}
+
+    # --- Gestione Dipendenti / Anagrafica ---
+    def upsert_dipendente(self, codice: str, nome: str, cognome: str = None) -> bool:
+        """Crea o aggiorna un dipendente per codice (senza badge)."""
+        if not codice or not nome:
+            return False
+        # Validazione codice: solo cifre, max 10
+        norm_cod = self._normalize_codice(codice)
+        if not norm_cod:
+            self.logger.warning(f"upsert_dipendente: codice non valido '{codice}' (richieste solo cifre, max 10)")
+            return False
+        with self._get_db_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO dipendenti (codice, nome, cognome)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(codice) DO UPDATE SET
+                        nome=excluded.nome,
+                        cognome=excluded.cognome,
+                        updated_at=CURRENT_TIMESTAMP
+                    """,
+                    (norm_cod, nome.strip(), (cognome or '').strip() or None)
+                )
+                conn.commit()
+                return True
+            except Exception as e:
+                self.logger.error(f"Errore upsert dipendente {codice}: {e}")
+                return False
+
+    def abbina_badge_a_dipendente(self, codice: str, badge_id: str) -> bool:
+        """Abbina/aggiorna il badge NFC per un dipendente dato il codice (mantiene badge univoco)."""
+        if not codice or not badge_id:
+            return False
+        # Validazione codice: solo cifre, max 10
+        norm_cod = self._normalize_codice(codice)
+        if not norm_cod:
+            self.logger.warning(f"abbina_badge_a_dipendente: codice non valido '{codice}' (richieste solo cifre, max 10)")
+            return False
+        with self._get_db_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                # Rimuovi eventuali altri dipendenti che già hanno questo badge per garantire unicità
+                cursor.execute("UPDATE dipendenti SET badge_id=NULL WHERE badge_id = ?", (badge_id.strip(),))
+                # Aggiorna/assegna al codice selezionato
+                cursor.execute(
+                    """
+                    UPDATE dipendenti
+                    SET badge_id = ?, updated_at=CURRENT_TIMESTAMP
+                    WHERE codice = ?
+                    """,
+                    (badge_id.strip(), norm_cod)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+            except Exception as e:
+                self.logger.error(f"Errore abbinamento badge {badge_id} a {codice}: {e}")
+                return False
+
+    def get_dipendente_by_codice(self, codice: str) -> Optional[Dict]:
+        with self._get_db_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                norm_cod = self._normalize_codice(codice)
+                if not norm_cod:
+                    return None
+                cursor.execute("SELECT * FROM dipendenti WHERE codice = ?", (norm_cod,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+            except Exception as e:
+                self.logger.error(f"Errore get_dipendente_by_codice {codice}: {e}")
+                return None
+
+    def get_dipendente_by_badge(self, badge_id: str) -> Optional[Dict]:
+        with self._get_db_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM dipendenti WHERE badge_id = ?", (badge_id.strip(),))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+            except Exception as e:
+                self.logger.error(f"Errore get_dipendente_by_badge {badge_id}: {e}")
+                return None
     
     def close(self):
         """Chiude database manager con cleanup finale"""
@@ -532,6 +663,39 @@ class TigotaSQLiteManager:
             
         except Exception as e:
             self.logger.error(f"Errore chiusura database: {e}")
+
+    # --- Manutenzione ---
+    def reset_database(self, keep_anagrafica: bool = False) -> bool:
+        """
+        Svuota le tabelle del database per un test pulito.
+        - keep_anagrafica=True: cancella solo timbrature e azzera badge su dipendenti (mantiene anagrafica senza badge)
+        - keep_anagrafica=False: cancella timbrature e dipendenti
+        """
+        with self._db_lock:
+            try:
+                with self._get_db_connection() as conn:
+                    cur = conn.cursor()
+                    # Svuota timbrature
+                    cur.execute("DELETE FROM timbrature")
+                    if keep_anagrafica:
+                        # Mantieni anagrafica ma rimuovi associazioni badge
+                        try:
+                            cur.execute("UPDATE dipendenti SET badge_id=NULL, updated_at=CURRENT_TIMESTAMP")
+                        except Exception:
+                            pass
+                    else:
+                        # Svuota completamente anagrafica
+                        cur.execute("DELETE FROM dipendenti")
+                    conn.commit()
+                    try:
+                        cur.execute("VACUUM")
+                    except Exception:
+                        pass
+                self.logger.info(f"🧹 Reset database completato (keep_anagrafica={keep_anagrafica})")
+                return True
+            except Exception as e:
+                self.logger.error(f"Errore reset database: {e}")
+                return False
 
 
 # Compatibilità con vecchio nome classe

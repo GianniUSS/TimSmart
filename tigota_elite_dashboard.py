@@ -14,2912 +14,1846 @@ import threading
 import time
 import configparser
 import winsound  # Per suoni Windows
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    pass
+from nfc_manager import NFCReader  # Lettore NFC
 try:
-    import pygame  # Per audio più robusto negli EXE
+    import importlib
+    pygame = importlib.import_module('pygame')  # type: ignore
     PYGAME_AVAILABLE = True
-except ImportError:
+except Exception:
+    pygame = None  # type: ignore
     PYGAME_AVAILABLE = False
-from nfc_manager import NFCReader
-from database_sqlite import get_database_manager, close_database
+
+# Supporto immagine (JPEG/PNG/GIF) con Pillow
+try:
+    from PIL import Image, ImageTk  # type: ignore
+    PIL_AVAILABLE = True
+except Exception:
+    Image = None  # type: ignore
+    ImageTk = None  # type: ignore
+    PIL_AVAILABLE = False
 
 class TigotaEliteDashboard:
     def __init__(self):
-        self.root = tk.Tk()
-        self.setup_elite_window()
+        """Inizializza la dashboard TIGOTÀ Elite"""
+        # Configurazione di base
+        self.selected_action = None
+        self.time_var = None
+        self.sec_var = None
+        self.is_closing = False
+        self.active_timers = []
+        self.kiosk_mode_active = False
+        self.kiosk_exit_pin = "2580"
+        self.badge_learn_mode = False
+        self.nfc_learn_mode = False
+        self._programmatic_update = False
+        self.is_tablet_resolution = False
+        self.show_seconds = True
+        self.nfc_reader = None  # Istanza lettore NFC
+        # Cattura tastiera per lettori "ID Card Reader" (modalità tastiera)
+        self._hid_entry = None
+        self._badge_buffer = ''
+        self._capture_active = False
+        # Scheduler trasferimento TXT
+        self._transfer_thread = None
+        self._transfer_stop = threading.Event()
 
-        # Carica configurazione negozio
-        self.load_store_config()
+        # Design tokens per interfaccia professionale moderna
+        self.design_tokens = {
+            # Colori primari - palette blu moderna
+            'primary': '#2563EB',           # Blu moderno e professionale
+            'primary_light': '#3B82F6',     # Blu chiaro per hover
+            'primary_dark': '#1D4ED8',      # Blu scuro per stati attivi
 
-        # Gestori (SQLite database robusto) - con retry
-        self.database_manager = None
-        self.init_database_manager()
-        self.nfc_reader = NFCReader(callback=self.on_badge_read)
+            # Colori di stato
+            'success': '#10B981',           # Verde smeraldo moderno
+            'warning': '#F59E0B',           # Ambra per attenzioni
+            'danger': '#EF4444',            # Rosso moderno
+            'info': '#06B6D4',              # Ciano per informazioni
 
-        # Variabili per animazioni
-        self.pulse_state = 0
-        self.notification_queue = []
+            # Palette neutri - scala grigia moderna
+            'white': '#FFFFFF',
+            'gray_50': '#F9FAFB',           # Sfondo principale
+            'gray_100': '#F3F4F6',          # Sfondo secondario
+            'gray_200': '#E5E7EB',          # Bordi sottili
+            'gray_300': '#D1D5DB',          # Bordi normali
+            'gray_400': '#9CA3AF',          # Testo disabilitato
+            'gray_500': '#6B7280',          # Testo secondario
+            'gray_600': '#4B5563',          # Testo principale
+            'gray_700': '#374151',          # Testi importanti
+            'gray_800': '#1F2937',          # Intestazioni
+            'gray_900': '#111827',          # Testo massimo contrasto
 
-        self.setup_elite_dashboard()
-        self.start_animations()
+            # Background e superfici
+            'background': '#F9FAFB',        # Sfondo app
+            'surface': '#FFFFFF',           # Card e superfici
+            'surface_elevated': '#FFFFFF',   # Superfici elevate (modal, dropdown)
 
-    def load_store_config(self):
-        """Carica configurazione negozio da config.ini se presente"""
-        try:
-            cfg = configparser.ConfigParser()
-            config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.ini')
-            self.store_config = {}
-            if os.path.exists(config_path):
-                cfg.read(config_path, encoding='utf-8')
-                if 'STORE' in cfg:
-                    self.store_config = dict(cfg['STORE'])
-        except Exception as e:
-            print(f"⚠️ Errore lettura config: {e}")
-            self.store_config = {}
+            # Testo - gerarchia tipografica
+            'text_primary': '#111827',       # Testo principale
+            'text_secondary': '#6B7280',     # Testo secondario
+            'text_muted': '#9CA3AF',        # Testo disabilitato
+            'text_inverse': '#FFFFFF',      # Testo su sfondo scuro
 
-    def get_store_display_text(self):
-        """Ritorna testo display del negozio"""
-        if hasattr(self, 'store_config') and self.store_config:
-            code = self.store_config.get('code') or self.store_config.get('id')
-            name = self.store_config.get('name') or self.store_config.get('negozio')
-            city = self.store_config.get('city') or self.store_config.get('citta')
-            parts = [p for p in [name, city, code] if p]
-            return " • ".join(parts)
-        return ""
+            # Spaziature - sistema 8pt
+            'spacing_xs': 4,
+            'spacing_sm': 8,
+            'spacing_md': 16,
+            'spacing_lg': 24,
+            'spacing_xl': 32,
+            'spacing_2xl': 48,
+            'spacing_3xl': 64,
 
-    def init_database_manager(self):
-        """Inizializza database manager con retry semplice"""
-        try:
-            self.database_manager = get_database_manager()
-        except Exception as e:
-            print(f"⚠️ DB non pronto: {e}")
-            self.database_manager = None
-            # Riprova tra 1 secondo
-            if hasattr(self, 'root'):
-                self.root.after(1000, self.retry_database_init)
+            # Ombre - colori grigi per simulare ombre
+            'shadow_sm': '#E5E7EB',        # Ombra sottile
+            'shadow_md': '#D1D5DB',        # Ombra media
+            'shadow_lg': '#9CA3AF',        # Ombra pronunciata
 
-    def retry_database_init(self):
-        """Riprova inizializzazione DB"""
-        if not getattr(self, 'database_manager', None):
-            self.init_database_manager()
-        
-    def setup_elite_window(self):
-        """Configura finestra elite con rilevamento tablet"""
-        self.root.title("TIGOTÀ Elite Dashboard")
-        self.root.attributes('-fullscreen', True)
-        self.root.configure(bg='#E8EDF2')  # Grigio più sofisticato
-        
-        # DETECT RISOLUZIONE per ottimizzazioni automatiche
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        
-        # Ottimizzazioni automatiche per tablet (risoluzione tipica 1024x768, 1280x800, etc.)
-        self.is_tablet_resolution = screen_height <= 900 or (screen_width <= 1366 and screen_height <= 768)
-        
-        if self.is_tablet_resolution:
-            print(f"📱 MODALITÀ TABLET RILEVATA: {screen_width}x{screen_height}")
-        else:
-            print(f"🖥️ MODALITÀ DESKTOP: {screen_width}x{screen_height}")
-        
-        # Bind eventi
-        self.root.bind('<Escape>', self.toggle_fullscreen)
-        self.root.bind('<F1>', self.show_admin)
-        self.root.bind('<F5>', self.refresh_dashboard)
-        
-        # SUPPORTO LETTORE USB ID CARD (modalità tastiera)
-        self.badge_input_buffer = ""
-        self.root.bind('<Key>', self.on_keyboard_input)
-        self.root.focus_set()  # Assicura che l'app riceva gli eventi tastiera
-        
-    # Nota: l'aggiornamento periodico verrà avviato dopo la creazione della UI
-        
-    def setup_elite_dashboard(self):
-        """Setup dashboard elite"""
-        # STRATEGIA LAYOUT OTTIMIZZATA PER TABLET
-        if self.is_tablet_resolution:
-            # Per tablet: padding ridotti per massimizzare spazio
-            main_container = tk.Frame(self.root, bg='#E8EDF2')
-            main_container.pack(fill='both', expand=True, padx=10, pady=5)
-        else:
-            # Per desktop: padding normali
-            main_container = tk.Frame(self.root, bg='#E8EDF2')
-            main_container.pack(fill='both', expand=True, padx=20, pady=20)
+            # Border radius - angoli moderni
+            'radius_sm': 6,
+            'radius_md': 8,
+            'radius_lg': 12,
+            'radius_xl': 16,
 
-        # Status bar PRIMA (sempre visibile in fondo)
-        self.create_status_bar(main_container)
-
-        # Header premium con gradiente
-        self.create_premium_header(main_container)
-
-        # Grid dashboard raffinato
-        self.create_premium_grid(main_container)
-
-        # Avvia aggiornamento automatico dati reali ogni 30 secondi, ora che la UI è pronta
-        self.schedule_real_data_update()
-        
-    def create_premium_header(self, parent):
-        """Header premium con gradiente"""
-        # Container header con altezza maggiore
-        header_container = tk.Frame(parent, bg='#E8EDF2')
-        header_container.pack(fill='x', pady=(0, 25))
-        
-        # Header principale con gradiente simulato
-        header_main = tk.Frame(header_container, bg='#1E88E5', height=80)
-        header_main.pack(fill='x')
-        header_main.pack_propagate(False)
-        
-        # Gradiente simulato con frame sovrapposti
-        for i in range(5):
-            shade = 30 + (i * 10)  # Da più scuro a più chiaro
-            color = f"#{shade:02x}{120 + i*10:02x}{229:02x}"
-            gradient_frame = tk.Frame(header_main, bg=color, height=16)
-            gradient_frame.pack(fill='x')
-        
-        # Content header sovrapposto
-        header_content = tk.Frame(header_container, bg='#1E88E5')
-        header_content.place(x=0, y=0, relwidth=1, height=80)
-        
-        # Layout header con più dettagli
-        content_frame = tk.Frame(header_content, bg='#1E88E5')
-        content_frame.pack(expand=True, fill='both', padx=50, pady=20)
-        
-        # Sinistra: Logo + info
-        left_section = tk.Frame(content_frame, bg='#1E88E5')
-        left_section.pack(side='left', fill='y')
-        
-        # Logo TIGOTÀ con ombra
-        logo_shadow = tk.Label(left_section,
-                              text="TIGOTÀ",
-                              font=('Segoe UI', 30, 'bold'),
-                              bg='#1E88E5',
-                              fg='#0D47A1')  # Ombra scura
-        logo_shadow.place(x=2, y=2)
-        
-        logo_main = tk.Label(left_section,
-                            text="TIGOTÀ",
-                            font=('Segoe UI', 30, 'bold'),
-                            bg='#1E88E5',
-                            fg='#FFFFFF')
-        logo_main.pack(side='left')
-        
-        # Separatore elegante
-        separator = tk.Label(left_section,
-                           text="  ◆  ",
-                           font=('Segoe UI', 20, 'normal'),
-                           bg='#1E88E5',
-                           fg='#BBDEFB')
-        separator.pack(side='left', padx=10)
-        
-        # Info sistema
-        info_frame = tk.Frame(left_section, bg='#1E88E5')
-        info_frame.pack(side='left', fill='y')
-        
-        system_title = tk.Label(info_frame,
-                               text="Sistema di Timbratura Aziendale",
-                               font=('Segoe UI', 14, 'bold'),
-                               bg='#1E88E5',
-                               fg='#FFFFFF')
-        system_title.pack(anchor='w')
-        
-        # Destra: Sezione controlli e info negozio
-        right_section = tk.Frame(content_frame, bg='#1E88E5')
-        right_section.pack(side='right', fill='y')
-        
-        # Container per icone di gestione
-        controls_frame = tk.Frame(right_section, bg='#1E88E5')
-        controls_frame.pack(side='right', fill='y', padx=(0, 20))
-        
-        # Icona gestione badge-NFC (professionale)
-        self.create_badge_management_icon(controls_frame)
-        
-        # Info negozio (se presente)
-        store_text = self.get_store_display_text()
-        if store_text:
-            store_label = tk.Label(right_section,
-                                  text=store_text,
-                                  font=('Segoe UI', 16, 'bold'),
-                                  bg='#1E88E5',
-                                  fg='#FFFFFF')
-            store_label.pack(anchor='e', padx=(20, 0))
-        
-    def create_premium_grid(self, parent):
-        """Grid premium con card avanzate"""
-        # Container grid con margini eleganti
-        grid_container = tk.Frame(parent, bg='#E8EDF2')
-        grid_container.pack(expand=True, fill='both', pady=(10, 15))
-        
-        # Grid 3x2 ottimizzato
-        for i in range(3):
-            grid_container.grid_columnconfigure(i, weight=1, minsize=300)
-        for i in range(2):
-            grid_container.grid_rowconfigure(i, weight=1, minsize=180)
-        
-        # Card premium con design migliorato - LAYOUT FINALE 2 CARD CON ALTEZZA UGUALE
-        self.create_clock_premium_card(grid_container, 0, 0, large=True)  # Orologio grande - 2 colonne e 2 righe (0,0 span 2x2)
-        self.create_nfc_premium_card(grid_container, 0, 2, large=True)    # NFC a destra - stessa altezza (colonna 2, span 2 righe)
-        
-    def create_clock_premium_card(self, parent, row, col, large=False):
-        """Card orologio premium con dettagli extra - ora supporta spanning completo"""
-        # Se large=True, occupa 2 colonne E 2 righe (colspan=2, rowspan=2)
-        colspan = 2 if large else 1
-        rowspan = 2 if large else 1
-        card = self.create_premium_card(parent, row, col, "🕐", "Orologio Centrale", "#E91E63", 
-                                       large=large, colspan=colspan, rowspan=rowspan)
-        
-        content = tk.Frame(card, bg='#FFFFFF')
-        content.pack(expand=True, fill='both', padx=10, pady=8)  # Padding minimizzato per massimo spazio
-        
-        # Canvas orologio MEGA GRANDE per massima visibilità
-        canvas_size = 480 if large else 320  # Aumentato ulteriormente per visibilità perfetta
-        self.premium_clock_canvas = tk.Canvas(content, 
-                                             width=canvas_size, 
-                                             height=canvas_size, 
-                                             bg='#FFFFFF', 
-                                             highlightthickness=0)
-        self.premium_clock_canvas.pack(expand=True, pady=(0, 2))  # Padding ultra minimo
-        
-        # Ora digitale con secondi animati - MASSIMIZZATA
-        time_frame = tk.Frame(content, bg='#FFFFFF')
-        time_frame.pack(fill='x')
-        
-        # Font dinamico MASSIMIZZATO per occupare tutto lo spazio
-        font_size = 70 if large else 50  # Aumentato da 55 a 70 per tablet
-        self.premium_time = tk.Label(time_frame,
-                                    font=('Consolas', font_size, 'bold'),
-                                    bg='#FFFFFF',
-                                    fg='#E91E63')
-        self.premium_time.pack()
-        
-        # Data MASSIMIZZATA per visibilità estrema
-        self.premium_date = tk.Label(time_frame,
-                                    font=('Segoe UI', 32, 'bold'),  # Aumentato da 24 a 32
-                                    bg='#FFFFFF',
-                                    fg='#666666')
-        self.premium_date.pack(pady=(0, 0))  # Padding azzerato
-        
-        # Timezone OTTIMIZZATO
-        timezone_label = tk.Label(time_frame,
-                                 text="UTC+1 (CEST)",
-                                 font=('Segoe UI', 20, 'italic'),  # Aumentato da 16 a 20
-                                 bg='#FFFFFF',
-                                 fg='#999999')
-        timezone_label.pack()
-        
-    def create_nfc_premium_card(self, parent, row, col, large=False):
-        """Card NFC premium con selettori tipo timbratura - ora supporta spanning verticale"""
-        # Se large=True, occupa 2 righe (rowspan=2)
-        rowspan = 2 if large else 1
-        card = self.create_premium_card(parent, row, col, "🏷️", "Sistema Timbratura", "#FF9800", 
-                                       large=large, rowspan=rowspan)
-        
-        content = tk.Frame(card, bg='#FFFFFF')
-        content.pack(expand=True, fill='both', padx=15, pady=10)  # Ridotto padding per tablet
-        
-        # Selettori tipo timbratura
-        self.create_timbratura_selectors(content)
-        
-        # Container per status e icona badge
-        bottom_frame = tk.Frame(content, bg='#FFFFFF')
-        bottom_frame.pack(fill='x', pady=(3, 0))  # Ridotto padding verticale
-        
-        # Status con dettagli (sinistra)
-        status_frame = tk.Frame(bottom_frame, bg='#FFFFFF')
-        status_frame.pack(side='left', fill='x', expand=True)
-        
-        self.nfc_status_premium = tk.Label(status_frame,
-                                          text="🟢 Lettore Attivo",
-                                          font=('Segoe UI', 14, 'bold'),  # Font più grande per tablet
-                                          bg='#FFFFFF',
-                                          fg='#4CAF50')
-        self.nfc_status_premium.pack()
-        
-        # Ultima lettura
-        self.last_read_label = tk.Label(status_frame,
-                                       text="Ultima lettura: --:--",
-                                       font=('Segoe UI', 11, 'normal'),  # Font più grande per tablet
-                                       bg='#FFFFFF',
-                                       fg='#666666')
-        self.last_read_label.pack()
-        
-        # Icona badge NFC in basso a destra - LAYOUT MIGLIORATO
-        badge_icon_frame = tk.Frame(bottom_frame, bg='#FFFFFF')
-        badge_icon_frame.pack(side='right', anchor='e', padx=(10, 0))  # Più spazio a sinistra
-        
-        # Carica immagine badge personalizzata o usa emoji di fallback
-        self.nfc_badge_icon = self.create_badge_icon(badge_icon_frame)
-        self.nfc_badge_icon.pack()
-        
-        # Freccia a destra sotto l'icona badge - PERFETTO PER TABLET
-        self.arrow_badge = tk.Label(badge_icon_frame,
-                                   text="→",  # Freccia classica
-                                   font=('Arial', 40, 'bold'),  # Font ottimale per tablet
-                                   bg='#FFFFFF',
-                                   fg='#FF4500')  # Arancione brillante per visibilità
-        self.arrow_badge.pack(pady=(5, 0))  # Più spazio sopra la freccia
-        
-    def create_badge_icon(self, parent):
-        """Crea icona badge - carica immagine personalizzata o usa emoji fallback"""
-        try:
-            # Lista dei possibili nomi file per l'immagine badge
-            badge_image_names = [
-                'logo_nfc.jpg', 'logo_nfc.png', 'logo_nfc.jpeg',  # Il tuo file specifico
-                'badge_icon.png', 'badge.png', 'nfc_badge.png', 
-                'badge_icon.jpg', 'badge.jpg', 'nfc_badge.jpg',
-                'badge_icon.jpeg', 'badge.jpeg', 'nfc_badge.jpeg',
-                'badge_icon.gif', 'badge.gif', 'nfc_badge.gif'
-            ]
-            
-            # Cerca l'immagine nella directory corrente e nella cartella immagini
-            badge_image_path = None
-            import os
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            
-            # Cartelle dove cercare l'immagine
-            search_directories = [
-                current_dir,  # Directory corrente
-                os.path.join(current_dir, 'immagini'),  # Cartella immagini
-                os.path.join(current_dir, 'images'),   # Cartella images
-                os.path.join(current_dir, 'assets')    # Cartella assets
-            ]
-            
-            # Cerca l'immagine in tutte le directory
-            for search_dir in search_directories:
-                if os.path.exists(search_dir):
-                    for image_name in badge_image_names:
-                        full_path = os.path.join(search_dir, image_name)
-                        if os.path.exists(full_path):
-                            badge_image_path = full_path
-                            print(f"✅ Trovata immagine badge: {image_name} in {search_dir}")
-                            break
-                    if badge_image_path:
-                        break
-            
-            if badge_image_path:
-                # Carica e ridimensiona l'immagine
-                from PIL import Image, ImageTk
-                
-                # Apri l'immagine
-                pil_image = Image.open(badge_image_path)
-                
-                # Ridimensiona OTTIMIZZATO per tablet (max 200x200 pixel - bilanciato per spazio)
-                size = (200, 200)  # Ridotto da 280 a 200 per lasciare spazio verticale
-                pil_image.thumbnail(size, Image.Resampling.LANCZOS)
-                
-                # Converti per tkinter
-                tk_image = ImageTk.PhotoImage(pil_image)
-                
-                # Crea label con immagine
-                badge_label = tk.Label(parent, image=tk_image, bg='#FFFFFF')
-                badge_label.image = tk_image  # Mantieni riferimento per evitare garbage collection
-                
-                print(f"✅ Immagine badge caricata: {badge_image_path}")
-                return badge_label
-                
-            else:
-                print("⚠️ Nessuna immagine badge trovata, uso emoji fallback")
-                raise FileNotFoundError("Badge image not found")
-                
-        except Exception as e:
-            print(f"⚠️ Errore caricamento immagine badge: {e}")
-            print("📟 Uso emoji fallback")
-            
-            # Fallback: usa emoji come prima
-            badge_label = tk.Label(parent,
-                                 text="📟",  # Emoji fallback
-                                 font=('Apple Color Emoji', 32),
-                                 bg='#FFFFFF')
-            return badge_label
-
-    def create_premium_card(self, parent, row, col, icon, title, color, large=False, rowspan=1, colspan=1):
-        """Crea card premium con effetti avanzati - supporta spanning verticale e orizzontale"""
-        # Padding dinamico
-        base_padx, base_pady = (12, 12) if large else (8, 8)
-        
-        # Ombra multipla per effetto depth
-        for i in range(3):
-            shadow_alpha = 50 + (i * 30)
-            shadow_color = f"#{shadow_alpha:02x}{shadow_alpha:02x}{shadow_alpha:02x}"
-            shadow = tk.Frame(parent, bg=shadow_color, height=1+i)
-            shadow.grid(row=row, column=col, rowspan=rowspan, columnspan=colspan, sticky='nsew', 
-                       padx=(base_padx+3+i, base_padx+3+i), 
-                       pady=(base_pady+3+i, base_pady+i))
-        
-        # Card principale con rowspan e colspan
-        card = tk.Frame(parent, bg='#FFFFFF', relief='flat', bd=0)
-        card.grid(row=row, column=col, rowspan=rowspan, columnspan=colspan, sticky='nsew', padx=base_padx, pady=base_pady)
-        
-        # Header con gradiente simulato
-        header = tk.Frame(card, bg=color, height=50)
-        header.pack(fill='x')
-        header.pack_propagate(False)
-        
-        # Gradiente header (simulato)
-        for i in range(3):
-            # Crea sfumature del colore principale
-            if color == "#2196F3":
-                gradient_colors = ["#1976D2", "#1E88E5", "#2196F3"]
-            elif color == "#E91E63":
-                gradient_colors = ["#C2185B", "#D81B60", "#E91E63"]
-            elif color == "#FF9800":
-                gradient_colors = ["#F57C00", "#FB8C00", "#FF9800"]
-            elif color == "#9C27B0":
-                gradient_colors = ["#7B1FA2", "#8E24AA", "#9C27B0"]
-            elif color == "#607D8B":
-                gradient_colors = ["#455A64", "#546E7A", "#607D8B"]
-            else:
-                gradient_colors = ["#5D4037", "#6D4C41", "#795548"]
-            
-            grad_frame = tk.Frame(header, bg=gradient_colors[i], height=17)
-            grad_frame.pack(fill='x')
-        
-        # Header content sovrapposto
-        header_content = tk.Frame(card, bg=color)
-        header_content.place(x=0, y=0, relwidth=1, height=50)
-        
-        header_inner = tk.Frame(header_content, bg=color)
-        header_inner.pack(expand=True, fill='both', padx=20, pady=12)
-        
-        # Icona con effetto glow
-        icon_shadow = tk.Label(header_inner,
-                              text=icon,
-                              font=('Apple Color Emoji', 18),
-                              bg=color,
-                              fg='#000000')
-        icon_shadow.place(x=1, y=1)
-        
-        icon_main = tk.Label(header_inner,
-                            text=icon,
-                            font=('Apple Color Emoji', 18),
-                            bg=color)
-        icon_main.pack(side='left')
-        
-        # Titolo con typography migliorata
-        title_label = tk.Label(header_inner,
-                              text=title,
-                              font=('Segoe UI', 12, 'bold'),
-                              bg=color,
-                              fg='#FFFFFF')
-        title_label.pack(side='left', padx=(10, 0))
-        
-        # Indicatore status
-        status_dot = tk.Label(header_inner,
-                             text="●",
-                             font=('Arial', 8),
-                             bg=color,
-                             fg='#FFFFFF')
-        status_dot.pack(side='right')
-        
-        return card
-        
-    def create_status_bar(self, parent):
-        """Status bar inferiore premium - SEMPRE VISIBILE su tablet"""
-        # OTTIMIZZAZIONE TABLET: Status bar ultra-compatta
-        if self.is_tablet_resolution:
-            status_bar = tk.Frame(parent, bg='#CFD8DC', height=35)  # Altezza fissa ridotta
-            status_bar.pack(fill='x', pady=(2, 2), side='bottom')  # Padding minimali
-            status_bar.pack_propagate(False)  # Mantieni altezza fissa
-            
-            # Content status bar ULTRA-COMPATTO per tablet
-            status_content = tk.Frame(status_bar, bg='#CFD8DC')
-            status_content.pack(expand=True, fill='both', padx=10, pady=2)  # Padding minimi
-            
-            # Solo info essenziali per tablet
-            left_status = tk.Label(status_content,
-                                  text="© 2025 TIGOTÀ Elite",  # Testo ancora più corto
-                                  font=('Segoe UI', 8, 'normal'),  # Font ancora più piccolo
-                                  bg='#CFD8DC',
-                                  fg='#37474F')
-            left_status.pack(side='left')
-            
-            # Centro: Notifiche compatte
-            self.notification_label = tk.Label(status_content,
-                                              text="",
-                                              font=('Segoe UI', 8, 'italic'),
-                                              bg='#CFD8DC',
-                                              fg='#E91E63')
-            self.notification_label.pack(side='left', padx=(15, 0))
-            
-            # Solo stato DB per tablet
-            tech_status = tk.Label(status_content,
-                                  text="🗄️ DB OK",  # Solo essenziale
-                                  font=('Segoe UI', 8, 'normal'),
-                                  bg='#CFD8DC',
-                                  fg='#37474F')
-            tech_status.pack(side='right')
-        else:
-            # Layout normale per desktop
-            status_bar = tk.Frame(parent, bg='#CFD8DC')  
-            status_bar.pack(fill='x', pady=(8, 5), side='bottom')  # Padding ridotto per tablet
-            
-            # Content status bar COMPATTO
-            status_content = tk.Frame(status_bar, bg='#CFD8DC')
-            status_content.pack(expand=True, fill='both', padx=20, pady=6)  # Padding ridotto
-            
-            # Sinistra: Copyright COMPATTO
-            left_status = tk.Label(status_content,
-                                  text="© 2025 TIGOTÀ | Sistema Timbratura Elite",  # Testo accorciato
-                                  font=('Segoe UI', 10, 'normal'),  # Font ridotto per spazio
-                                  bg='#CFD8DC',
-                                  fg='#37474F')
-            left_status.pack(side='left')
-            
-            # Centro: Notifiche COMPATTE
-            self.notification_label = tk.Label(status_content,
-                                              text="",
-                                              font=('Segoe UI', 10, 'italic'),  # Font ridotto
-                                              bg='#CFD8DC',
-                                              fg='#E91E63')
-            self.notification_label.pack(side='left', padx=(30, 0))  # Padding ridotto
-            
-            # Destra: Info tecniche COMPATTE
-            tech_status = tk.Label(status_content,
-                                  text="🔒 Sicuro | 🗄️ DB OK | 📡 Sync",  # Testo accorciato
-                                  font=('Segoe UI', 10, 'normal'),  # Font ridotto
-                                  bg='#CFD8DC',
-                                  fg='#37474F')
-            tech_status.pack(side='right')
-        
-    def create_badge_management_icon(self, parent):
-        """Crea icona professionale per gestione abbinamento badge-NFC"""
-        # Container principale con effetti hover
-        icon_container = tk.Frame(parent, bg='#1E88E5', cursor='hand2')
-        icon_container.pack(side='right', padx=(10, 0))
-        
-        # Frame interno con bordo elegante
-        icon_frame = tk.Frame(icon_container, 
-                             bg='#0D47A1', 
-                             relief='raised', 
-                             bd=1,
-                             width=50, 
-                             height=50)
-        icon_frame.pack_propagate(False)
-        icon_frame.pack(padx=2, pady=2)
-        
-        # Icona principale - simbolo professionale per configurazione badge
-        icon_label = tk.Label(icon_frame,
-                             text="⚙️",  # Icona ingranaggio per configurazione
-                             font=('Segoe UI Emoji', 20),
-                             bg='#0D47A1',
-                             fg='#FFFFFF')
-        icon_label.pack(expand=True)
-        
-        # Badge piccolo indicatore
-        badge_indicator = tk.Label(icon_frame,
-                                  text="🏷️",
-                                  font=('Segoe UI Emoji', 12),
-                                  bg='#0D47A1',
-                                  fg='#FFD700')  # Oro per distinguere
-        badge_indicator.place(x=32, y=32)
-        
-        # Tooltip al passaggio del mouse
-        def show_tooltip(event):
-            # Cambia colore per feedback hover
-            icon_frame.configure(bg='#1565C0')
-            icon_label.configure(bg='#1565C0')
-            badge_indicator.configure(bg='#1565C0')
-            
-        def hide_tooltip(event):
-            # Ripristina colore originale
-            icon_frame.configure(bg='#0D47A1')
-            icon_label.configure(bg='#0D47A1')
-            badge_indicator.configure(bg='#0D47A1')
-        
-        def open_badge_management(event):
-            """Apre finestra gestione badge-NFC"""
-            self.show_badge_management_window()
-        
-        # Bind eventi per tutti i componenti
-        for widget in [icon_container, icon_frame, icon_label, badge_indicator]:
-            widget.bind('<Enter>', show_tooltip)
-            widget.bind('<Leave>', hide_tooltip)
-            widget.bind('<Button-1>', open_badge_management)
-            widget.configure(cursor='hand2')
-        
-        # Salva riferimento per aggiornamenti
-        self.badge_management_icon = {
-            'container': icon_container,
-            'frame': icon_frame,
-            'icon': icon_label,
-            'badge': badge_indicator
+            # Typography - font sizing moderna
+            'font_xs': 12,
+            'font_sm': 14,
+            'font_base': 16,
+            'font_lg': 18,
+            'font_xl': 20,
+            'font_2xl': 24,
+            'font_3xl': 30,
+            'font_4xl': 36,
+            'font_5xl': 48
         }
-        
-    def show_badge_management_window(self):
-        """Finestra professionale per gestione abbinamento badge-NFC"""
-        # Crea finestra modal professionale
-        window = tk.Toplevel(self.root)
-        window.title("Gestione Abbinamento Badge-NFC | TIGOTÀ Elite")
-        window.configure(bg='#F5F5F5')
-        window.resizable(False, False)
-        
-        # Dimensioni e posizionamento centrato
-        window_width = 800
-        window_height = 600
-        
-        # Calcola posizione centrale
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
-        
-        window.geometry(f"{window_width}x{window_height}+{x}+{y}")
-        window.attributes('-topmost', True)
-        window.grab_set()  # Modal
-        
-        # Header professionale
-        header_frame = tk.Frame(window, bg='#1E88E5', height=80)
-        header_frame.pack(fill='x')
-        header_frame.pack_propagate(False)
-        
-        header_content = tk.Frame(header_frame, bg='#1E88E5')
-        header_content.pack(expand=True, fill='both', padx=30, pady=20)
-        
-        # Titolo e icona
-        title_frame = tk.Frame(header_content, bg='#1E88E5')
-        title_frame.pack(fill='x')
-        
-        title_icon = tk.Label(title_frame,
-                             text="⚙️🏷️",
-                             font=('Segoe UI Emoji', 24),
-                             bg='#1E88E5',
-                             fg='#FFFFFF')
-        title_icon.pack(side='left')
-        
-        title_label = tk.Label(title_frame,
-                              text="Gestione Abbinamento Badge-NFC",
-                              font=('Segoe UI', 18, 'bold'),
-                              bg='#1E88E5',
-                              fg='#FFFFFF')
-        title_label.pack(side='left', padx=(15, 0))
-        
-        # Sottotitolo
-        subtitle_label = tk.Label(header_content,
-                                 text="Associa codici badge ai valori NFC per il riconoscimento automatico",
-                                 font=('Segoe UI', 12),
-                                 bg='#1E88E5',
-                                 fg='#BBDEFB')
-        subtitle_label.pack(anchor='w', pady=(5, 0))
-        
-        # Content area principale
-        main_content = tk.Frame(window, bg='#F5F5F5')
-        main_content.pack(expand=True, fill='both', padx=30, pady=20)
-        
-        # Sezione nuovo abbinamento
-        self.create_new_pairing_section(main_content)
-        
-        # Separatore elegante - NASCOSTO
-        # separator = tk.Frame(main_content, bg='#E0E0E0', height=2)
-        # separator.pack(fill='x', pady=20)
-        
-        # Sezione lista abbinamenti esistenti - NASCOSTA su richiesta utente
-        # self.create_existing_pairings_section(main_content, window)
-        
-        # Footer con pulsanti
-        footer_frame = tk.Frame(window, bg='#F5F5F5')
-        footer_frame.pack(fill='x', padx=30, pady=(0, 20))
-        
-        # Pulsante chiudi
-        close_button = tk.Button(footer_frame,
-                                text="✖️ Chiudi",
-                                font=('Segoe UI', 12, 'bold'),
-                                bg='#757575',
-                                fg='#FFFFFF',
-                                relief='flat',
-                                padx=20,
-                                pady=8,
-                                cursor='hand2',
-                                command=window.destroy)
-        close_button.pack(side='right')
-        
-        # Salva riferimento finestra
-        self.badge_management_window = window
-        
-    def create_new_pairing_section(self, parent):
-        """Sezione per creare nuovo abbinamento badge-NFC"""
-        # Titolo sezione
-        section_title = tk.Label(parent,
-                                text="➕ Nuovo Abbinamento",
-                                font=('Segoe UI', 16, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#1E88E5')
-        section_title.pack(anchor='w', pady=(0, 15))
-        
-        # Frame principale per form
-        form_frame = tk.Frame(parent, bg='#FFFFFF', relief='solid', bd=1)
-        form_frame.pack(fill='x', pady=(0, 10))
-        
-        form_content = tk.Frame(form_frame, bg='#FFFFFF')
-        form_content.pack(fill='x', padx=25, pady=20)
-        
-        # Prima riga: Badge ID
-        row1 = tk.Frame(form_content, bg='#FFFFFF')
-        row1.pack(fill='x', pady=(0, 15))
-        
-        badge_label = tk.Label(row1,
-                              text="Codice Badge:",
-                              font=('Segoe UI', 14, 'bold'),  # Font più grande
-                              bg='#FFFFFF',
-                              fg='#333333',
-                              width=12)  # Larghezza fissa per allineamento
-        badge_label.pack(side='left')
-        
-        self.badge_entry = tk.Entry(row1,
-                                   font=('Consolas', 14, 'bold'),  # Font più grande
-                                   width=25,  # Campo più largo
-                                   relief='solid',
-                                   bd=2,  # Bordo più spesso
-                                   bg='#F8F9FA',  # Sfondo leggermente diverso per indicare tocco
-                                   fg='#333333',
-                                   insertbackground='#333333',  # Cursore visibile
-                                   cursor='hand2')  # Cursore a mano per indicare che è cliccabile
-        self.badge_entry.pack(side='left', padx=(10, 0), ipady=8)  # Padding verticale interno
-        
-        # BINDING per aprire tastierino al tocco del campo - CON CONTROLLO ANTI-LOOP
-        def open_badge_keypad(event=None):
-            # Non aprire se stiamo aggiornando programmaticamente
-            if getattr(self, '_programmatic_update', False):
-                return
-            # Non aprire se il campo ha già un valore valido (non è il placeholder)
-            current_val = self.badge_entry.get()
-            if current_val and current_val != "👆 Tocca per tastierino" and len(current_val.strip()) > 0:
-                # Se l'utente clicca su un campo già compilato, seleziona tutto per facilitare la modifica
-                self.badge_entry.select_range(0, tk.END)
-                return
-            self.show_numeric_keypad('badge')
-        
-        self.badge_entry.bind('<Button-1>', open_badge_keypad)
-        
-        # Tooltip visivo per far capire che il campo è toccabile
-        self.badge_entry.insert(0, "👆 Tocca per tastierino")
-        self.badge_entry.bind('<Enter>', lambda e: self.badge_entry.configure(bg='#E3F2FD'))
-        self.badge_entry.bind('<Leave>', lambda e: self.badge_entry.configure(bg='#F8F9FA'))
-        
-        # Pulsante tastierino numerico - NUOVO per tablet touch
-        keypad_btn = tk.Button(row1,
-                              text="🔢",
-                              font=('Segoe UI Emoji', 12),
-                              bg='#2196F3',
-                              fg='#FFFFFF',
-                              relief='flat',
-                              width=3,
-                              pady=5,
-                              cursor='hand2',
-                              command=lambda: self.show_numeric_keypad('badge'))
-        keypad_btn.pack(side='left', padx=(5, 0))
-        
-        # Seconda riga: Valore NFC
-        row2 = tk.Frame(form_content, bg='#FFFFFF')
-        row2.pack(fill='x', pady=(0, 15))
-        
-        nfc_label = tk.Label(row2,
-                            text="Valore NFC:",
-                            font=('Segoe UI', 14, 'bold'),  # Font più grande
-                            bg='#FFFFFF',
-                            fg='#333333',
-                            width=12)  # Larghezza fissa per allineamento
-        nfc_label.pack(side='left')
-        
-        # Campo NFC - SOLO LETTURA TRAMITE LETTORE HARDWARE NFC - NESSUN TASTIERINO
-        self.nfc_entry = tk.Entry(row2,
-                                 font=('Consolas', 14, 'bold'),  # Font più grande
-                                 width=25,  # Campo più largo
-                                 relief='solid',
-                                 bd=2,  # Bordo più spesso
-                                 bg='#F0F8FF',  # Sfondo azzurro per indicare lettura hardware
-                                 fg='#333333',
-                                 state='readonly',  # SOLO LETTURA - non modificabile
-                                 cursor='arrow')  # Cursore normale, non cliccabile
-        self.nfc_entry.pack(side='left', padx=(10, 0), ipady=8)  # Padding verticale interno
-        
-        # NESSUN BINDING PER TASTIERINO - Il campo NFC viene popolato solo dal lettore hardware
-        # Inserisce testo esplicativo
-        self.nfc_entry.config(state='normal')
-        self.nfc_entry.insert(0, "🔵 Avvicina NFC al lettore")
-        self.nfc_entry.configure(fg='#666666')
-        self.nfc_entry.config(state='readonly')
-        
-        # Solo hover per feedback visivo che il campo riceve dati dal lettore
-        self.nfc_entry.bind('<Enter>', lambda e: self.nfc_entry.configure(bg='#E8F5E8'))
-        self.nfc_entry.bind('<Leave>', lambda e: self.nfc_entry.configure(bg='#F0F8FF'))
-        
-        # Terza riga: Nome/Descrizione
-        row3 = tk.Frame(form_content, bg='#FFFFFF')
-        row3.pack(fill='x', pady=(0, 20))
-        
-        name_label = tk.Label(row3,
-                             text="Nome/Desc:",
-                             font=('Segoe UI', 14, 'bold'),  # Font più grande
-                             bg='#FFFFFF',
-                             fg='#333333',
-                             width=12)  # Larghezza fissa per allineamento
-        name_label.pack(side='left')
-        
-        self.name_entry = tk.Entry(row3,
-                                  font=('Segoe UI', 14, 'bold'),  # Font più grande
-                                  width=35,  # Campo più largo
-                                  relief='solid',
-                                  bd=2,  # Bordo più spesso
-                                  bg='#F8F9FA',  # Sfondo leggermente diverso per indicare tocco
-                                  fg='#333333',
-                                  insertbackground='#333333',  # Cursore visibile
-                                  cursor='hand2')  # Cursore a mano per indicare che è cliccabile
-        self.name_entry.pack(side='left', padx=(10, 0), ipady=8)  # Padding verticale interno
-        
-        # BINDING per aprire tastierino al tocco del campo NOME - CON CONTROLLO ANTI-LOOP
-        def open_name_keypad(event=None):
-            # Non aprire se stiamo aggiornando programmaticamente
-            if getattr(self, '_programmatic_update', False):
-                return
-            # Non aprire se il campo ha già un valore valido (non è il placeholder)
-            current_val = self.name_entry.get()
-            if current_val and current_val != "👆 Tocca per tastierino" and len(current_val.strip()) > 0:
-                # Se l'utente clicca su un campo già compilato, seleziona tutto per facilitare la modifica
-                self.name_entry.select_range(0, tk.END)
-                return
-            self.show_numeric_keypad('name')
-        
-        self.name_entry.bind('<Button-1>', open_name_keypad)
-        
-        # Tooltip visivo per far capire che il campo è toccabile
-        self.name_entry.insert(0, "👆 Tocca per tastierino")
-        self.name_entry.bind('<Enter>', lambda e: self.name_entry.configure(bg='#E8F5E8'))
-        self.name_entry.bind('<Leave>', lambda e: self.name_entry.configure(bg='#F8F9FA'))
-        
-        # Pulsante tastierino alfanumerico per NOME
-        name_keypad_btn = tk.Button(row3,
-                                   text="⌨️",
-                                   font=('Segoe UI Emoji', 12),
-                                   bg='#4CAF50',
-                                   fg='#FFFFFF',
-                                   relief='flat',
-                                   width=3,
-                                   pady=5,
-                                   cursor='hand2',
-                                   command=lambda: self.show_numeric_keypad('name'))
-        name_keypad_btn.pack(side='left', padx=(5, 0))
-        
-        # Pulsante salva
-        save_btn = tk.Button(form_content,
-                            text="💾 Salva Abbinamento",
-                            font=('Segoe UI', 12, 'bold'),
-                            bg='#1E88E5',
-                            fg='#FFFFFF',
-                            relief='flat',
-                            padx=25,
-                            pady=10,
-                            cursor='hand2',
-                            command=self.save_badge_pairing)
-        save_btn.pack(anchor='e')
-        
-    def create_existing_pairings_section(self, parent, window):
-        """Sezione per visualizzare abbinamenti esistenti"""
-        # Titolo sezione
-        section_title = tk.Label(parent,
-                                text="📋 Abbinamenti Esistenti",
-                                font=('Segoe UI', 16, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#1E88E5')
-        section_title.pack(anchor='w', pady=(0, 15))
-        
-        # Container con scrollbar
-        list_container = tk.Frame(parent, bg='#FFFFFF', relief='solid', bd=1)
-        list_container.pack(fill='both', expand=True)
-        
-        # Canvas per scrolling
-        canvas = tk.Canvas(list_container, bg='#FFFFFF', highlightthickness=0)
-        scrollbar = tk.Scrollbar(list_container, orient='vertical', command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg='#FFFFFF')
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Header della lista
-        header_frame = tk.Frame(scrollable_frame, bg='#E3F2FD')
-        header_frame.pack(fill='x', padx=10, pady=(10, 5))
-        
-        tk.Label(header_frame, text="Codice Badge", font=('Segoe UI', 10, 'bold'), 
-                bg='#E3F2FD', fg='#1565C0', width=15).pack(side='left', padx=5)
-        tk.Label(header_frame, text="Valore NFC", font=('Segoe UI', 10, 'bold'), 
-                bg='#E3F2FD', fg='#1565C0', width=20).pack(side='left', padx=5)
-        tk.Label(header_frame, text="Nome/Descrizione", font=('Segoe UI', 10, 'bold'), 
-                bg='#E3F2FD', fg='#1565C0', width=25).pack(side='left', padx=5)
-        tk.Label(header_frame, text="Azioni", font=('Segoe UI', 10, 'bold'), 
-                bg='#E3F2FD', fg='#1565C0', width=10).pack(side='left', padx=5)
-        
-        # Carica abbinamenti esistenti
-        self.load_existing_pairings(scrollable_frame)
-        
-        # Salva riferimenti
-        self.pairings_canvas = canvas
-        self.pairings_scrollable_frame = scrollable_frame
-        
-    def start_badge_scan(self):
-        """Avvia scansione badge in modalità learn"""
+
+        # Carica configurazione kiosk
+        self.load_kiosk_config()
+
+    def set_root(self, root):
+        """Imposta il riferimento alla finestra root"""
+        self.root = root
+
+    # --- Tablet scaling helpers ---
+    def init_scaling(self, parent):
+        """Calcola fattore di scala e dimensioni viewport ottimizzate per tablet 8" (baseline 1280x800)."""
         try:
-            # Pulisce campo e prepara per input
-            self.badge_entry.delete(0, tk.END)
-            self.badge_entry.configure(bg='#FFF3E0')  # Sfondo arancione chiaro
-            self.badge_entry.insert(0, "Avvicina badge...")
+            self.vw = parent.winfo_screenwidth()
+            self.vh = parent.winfo_screenheight()
+        except tk.TclError:
+            # Fallback se la finestra non è ancora pronta
+            self.vw, self.vh = 1280, 800
+        
+        # Baseline per tablet 8 pollici
+        BASE_WIDTH, BASE_HEIGHT = 1280, 800
+        
+        # Calcolo scaling factor con bounds di sicurezza
+        scale_x = self.vw / BASE_WIDTH
+        scale_y = self.vh / BASE_HEIGHT
+        self.scale = max(0.5, min(3.0, min(scale_x, scale_y)))  # Limiti ragionevoli
+        
+        # Helper per scaling con cache
+        self._scale_cache = {}
+        def scaled_value(v):
+            if v not in self._scale_cache:
+                self._scale_cache[v] = max(1, int(round(v * self.scale)))
+            return self._scale_cache[v]
+        
+        self.s = scaled_value
+
+    # --- Drawing helpers ---
+    def draw_rounded_rect(self, canvas: tk.Canvas, x1, y1, x2, y2, radius, **kwargs):
+        """Disegna un rettangolo con angoli arrotondati ottimizzato."""
+        # Validazione parametri
+        if x2 <= x1 or y2 <= y1:
+            return None
             
-            # Abilita modalità learn per prossima lettura
-            self.badge_learn_mode = True
-            
-            # Messaggio di feedback
-            self.show_notification("🔍 Modalità apprendimento badge attiva - Avvicina il badge")
-            
-            # Auto-reset dopo 30 secondi
-            self.root.after(30000, self.reset_badge_learn_mode)
-            
-        except Exception as e:
-            print(f"❌ Errore avvio scansione badge: {e}")
-            
-    def start_nfc_read(self):
-        """Avvia lettura NFC in modalità learn - Solo lettore hardware"""
-        try:
-            # Pulisce campo e prepara per input dal lettore hardware
-            self.nfc_entry.config(state='normal')
-            self.nfc_entry.delete(0, tk.END)
-            self.nfc_entry.configure(bg='#E8F5E8')  # Sfondo verde chiaro
-            self.nfc_entry.insert(0, "📡 Lettura NFC attiva...")
-            self.nfc_entry.config(state='readonly')
-            
-            # Abilita modalità learn per prossima lettura
-            self.nfc_learn_mode = True
-            
-            # Messaggio di feedback
-            self.show_notification("📡 Modalità lettura NFC attiva - Avvicina il badge al lettore hardware")
-            
-            # Auto-reset dopo 30 secondi
-            self.root.after(30000, self.reset_nfc_learn_mode)
-            
-        except Exception as e:
-            print(f"❌ Errore avvio lettura NFC: {e}")
-            
-    def reset_badge_learn_mode(self):
-        """Reset modalità apprendimento badge"""
-        if hasattr(self, 'badge_learn_mode'):
-            self.badge_learn_mode = False
-            if hasattr(self, 'badge_entry'):
-                self.badge_entry.configure(bg='#FFFFFF')
-                if self.badge_entry.get() == "Avvicina badge...":
-                    self.badge_entry.delete(0, tk.END)
-                    
-    def reset_nfc_learn_mode(self):
-        """Reset modalità lettura NFC"""
-        if hasattr(self, 'nfc_learn_mode'):
-            self.nfc_learn_mode = False
-            if hasattr(self, 'nfc_entry'):
-                self.nfc_entry.config(state='normal')
-                self.nfc_entry.configure(bg='#F0F8FF')
-                if self.nfc_entry.get() in ["📡 Lettura NFC attiva...", "Lettura NFC..."]:
-                    self.nfc_entry.delete(0, tk.END)
-                    self.nfc_entry.insert(0, "🔵 Avvicina NFC al lettore")
-                    self.nfc_entry.configure(fg='#666666')
-                self.nfc_entry.config(state='readonly')
-                    
-    def save_badge_pairing(self):
-        """Salva nuovo abbinamento badge-NFC"""
-        try:
-            badge_code = self.badge_entry.get().strip()
-            nfc_value = self.nfc_entry.get().strip()
-            name_desc = self.name_entry.get().strip()
-            
-            # Validazione
-            if not badge_code or badge_code == "Avvicina badge...":
-                self.show_notification("⚠️ Inserire codice badge valido")
-                return
-                
-            if not nfc_value or nfc_value == "Lettura NFC...":
-                self.show_notification("⚠️ Inserire valore NFC valido")
-                return
-                
-            if not name_desc:
-                name_desc = f"Badge {badge_code}"
-            
-            # Salva nel database (se supportato)
-            success = False
-            if hasattr(self, 'database_manager') and self.database_manager:
+        # Calcolo radius sicuro
+        max_radius = min((x2 - x1) / 2, (y2 - y1) / 2)
+        r = max(0, min(radius, max_radius))
+        
+        if r == 0:
+            # Rectangle normale se radius troppo piccolo
+            return canvas.create_rectangle(x1, y1, x2, y2, **kwargs)
+        
+        # Punti per polygon arrotondato ottimizzato
+        points = [
+            x1 + r, y1,           # Top edge start
+            x2 - r, y1,           # Top edge end  
+            x2, y1 + r,           # Top-right corner
+            x2, y2 - r,           # Right edge
+            x2 - r, y2,           # Bottom-right corner
+            x1 + r, y2,           # Bottom edge
+            x1, y2 - r,           # Bottom-left corner
+            x1, y1 + r,           # Left edge back to start
+        ]
+        
+        return canvas.create_polygon(points, smooth=True, **kwargs)
+
+    def create_pill_button(self, parent, text: str, bg_color: str, fg_color: str, command):
+        """Crea un pulsante pill button responsive con raggio pieno e testo ben visibile.
+        Supporta stato di selezione (selector) con contorno evidenziato.
+        """
+        # Dimensioni proporzionali
+        width = int(self.vw * 0.34)
+        height = int(self.vh * 0.09)
+        radius = max(self.s(16), int(height * 0.50))  # full pill
+        font_size = max(self.s(24), int(height * 0.48))
+        
+        canvas = tk.Canvas(parent, width=width, height=height, bg='#FFFFFF', highlightthickness=0, bd=0, cursor='hand2')
+        rect_id = self.draw_rounded_rect(canvas, 0, 0, width, height, radius, fill=bg_color, outline='', width=0)
+        text_id = canvas.create_text(width // 2, height // 2, text=text, fill=fg_color, font=('Segoe UI', font_size, 'bold'), anchor='center')
+        
+        state = {'selected': False}
+        
+        def set_selected(flag: bool):
+            state['selected'] = bool(flag)
+            if state['selected']:
+                # Evidenzia con contorno spesso e leggero scurimento della pill
+                outline_col = self._darken_color(bg_color, 0.35)
+                canvas.itemconfig(rect_id, outline=outline_col, width=self.s(6), fill=self._darken_color(bg_color, 0.05))
+            else:
+                canvas.itemconfig(rect_id, outline='', width=0, fill=bg_color)
+            # Mantieni testo leggibile
+            canvas.itemconfig(text_id, fill=fg_color)
+        
+        def handle_click(event=None):
+            # Effetto click breve
+            original = canvas.itemcget(rect_id, 'fill')
+            darker = self._darken_color(original.lstrip('#'), 0.1) if isinstance(original, str) else bg_color
+            try:
+                canvas.itemconfig(rect_id, fill=darker)
+                canvas.after(120, lambda: canvas.itemconfig(rect_id, fill=original))
+            except Exception:
+                pass
+            # Esegui callback
+            if callable(command):
                 try:
-                    success = self.database_manager.save_badge_pairing(
-                        badge_code=badge_code,
-                        nfc_value=nfc_value,
-                        description=name_desc
+                    command()
+                except Exception as e:
+                    print(f'Errore pulsante: {e}')
+        
+        for item in [canvas, rect_id, text_id]:
+            if hasattr(item, 'bind'):
+                item.bind('<Button-1>', handle_click)
+            else:
+                canvas.tag_bind(item, '<Button-1>', handle_click)
+        
+        return {
+            'canvas': canvas,
+            'rect_id': rect_id,
+            'text_id': text_id,
+            'bg_color': bg_color,
+            'fg_color': fg_color,
+            'command': command,
+            'set_selected': set_selected,
+            'is_selected': lambda: state['selected'],
+        }
+    
+    def _darken_color(self, hex_color: str, factor: float) -> str:
+        """Scurisce un colore hex di un fattore dato."""
+        try:
+            # Rimuovi # se presente
+            hex_color = hex_color.lstrip('#')
+            
+            # Converti in RGB
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+            
+            # Applica scurimento
+            r = max(0, int(r * (1 - factor)))
+            g = max(0, int(g * (1 - factor)))
+            b = max(0, int(b * (1 - factor)))
+            
+            return f"#{r:02x}{g:02x}{b:02x}"
+        except (ValueError, IndexError):
+            return hex_color  # Ritorna colore originale se errore
+
+    # --- Layout main ---
+    def build_dashboard(self, parent):
+        """Dashboard TIGOTÀ - Full-screen, scaling 8" e mockup-spec con topbar brand."""
+        parent.configure(bg='#FFFFFF')
+        self.init_scaling(parent)
+
+        # Wrapper a griglia per: header (row 0), spacer top (row 1), contenuto (row 2), spacer bottom (row 3), footer NFC (row 4)
+        outer = tk.Frame(parent, bg='#FFFFFF')
+        outer.pack(fill='both', expand=True)
+        for r, w in ((0, 0), (1, 1), (2, 0), (3, 1), (4, 0)):
+            outer.grid_rowconfigure(r, weight=w)
+        outer.grid_columnconfigure(0, weight=1)
+
+        # Topbar brand
+        self.create_brand_topbar(outer)
+
+        # Spacer superiore per centrare verticalmente
+        tk.Frame(outer, bg='#FFFFFF').grid(row=1, column=0, sticky='nsew')
+
+        # Contenuto centrato
+        content = tk.Frame(outer, bg='#FFFFFF')
+        content.grid(row=2, column=0, sticky='n')
+
+        # Contenuto principale
+        self.create_large_clock(content)
+        self.create_action_buttons(content)
+
+        # Spacer inferiore per centrare verticalmente
+        tk.Frame(outer, bg='#FFFFFF').grid(row=3, column=0, sticky='nsew')
+
+        # Barra NFC ancorata in basso (nuova row 4)
+        self.create_nfc_indicator(outer)
+
+        # Setup cattura tastiera per lettori USB in modalità tastiera
+        try:
+            self._setup_keyboard_capture()
+        except Exception as e:
+            print(f"[NFC] Setup keyboard capture fallito: {e}")
+
+        # Avvia scheduler trasferimento TXT giornaliero
+        try:
+            self._start_transfer_scheduler()
+        except Exception as e:
+            print(f"[TRANSFER] Avvio scheduler fallito: {e}")
+
+    # Nota: il wizard ora si apre cliccando l'icona in alto a destra; F10 disabilitato su richiesta.
+
+    def create_brand_topbar(self, parent):
+        """Crea topbar più spessa (≈11% vh, min 84px), con logo TIGOTA centrato, accento rosso e icona a destra."""
+        import tkinter.font as tkfont
+
+        # Dimensioni e proporzioni
+        TOPBAR_HEIGHT_RATIO = 0.11  # era 0.09
+        LOGO_FONT_RATIO = 0.66
+        ACCENT_WIDTH_RATIO = 0.70
+        ACCENT_HEIGHT_RATIO = 0.28
+        ACCENT_SKEW_RATIO = 0.20
+        ACCENT_OFFSET_Y_RATIO = 0.10
+
+        # Stile brand TIGOTA
+        BRAND_BG_COLOR = '#5FA8AF'
+        BRAND_TEXT_COLOR = '#FFFFFF'
+        BRAND_ACCENT_COLOR = '#E22646'
+
+        bar_height = max(self.s(84), int(self.vh * TOPBAR_HEIGHT_RATIO))
+
+        topbar_frame = tk.Frame(parent, bg=BRAND_BG_COLOR, height=bar_height)
+        topbar_frame.grid(row=0, column=0, sticky='ew')
+        topbar_frame.grid_propagate(False)
+
+        canvas = tk.Canvas(topbar_frame, bg=BRAND_BG_COLOR, highlightthickness=0, bd=0, height=bar_height)
+        canvas.pack(fill='both', expand=True)
+
+        logo_font_size = max(12, int(bar_height * LOGO_FONT_RATIO))
+        brand_font = tkfont.Font(family='Segoe UI', size=logo_font_size, weight='bold')
+
+        # Carica icone topbar: sinistra (impostazioni), centro (logo TIGOTA), destra (NFC/info)
+        self._topbar_left_icon = None
+        self._topbar_center_logo = None
+        self._topbar_icon = None
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            # Sinistra: icona impostazioni
+            left_icon_path = os.path.join(base_dir, 'Immagini', 'icona_setting.png')
+            if os.path.exists(left_icon_path):
+                target_h_l = int(bar_height * 0.70)
+                if PIL_AVAILABLE:
+                    try:
+                        pil_left = Image.open(left_icon_path)
+                        w, h = pil_left.size
+                        if h > 0:
+                            scale = target_h_l / float(h)
+                            new_w = max(1, int(round(w * scale)))
+                            new_h = max(1, int(round(h * scale)))
+                            resample = Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS
+                            pil_left = pil_left.resize((new_w, new_h), resample)
+                        self._topbar_left_icon = ImageTk.PhotoImage(pil_left)
+                    except Exception:
+                        self._topbar_left_icon = None
+                else:
+                    try:
+                        img = tk.PhotoImage(file=left_icon_path)
+                        if img.height() > target_h_l:
+                            factor = max(1, img.height() // max(1, target_h_l))
+                            img = img.subsample(factor, factor)
+                        self._topbar_left_icon = img
+                    except Exception:
+                        self._topbar_left_icon = None
+            # Centro: logo TIGOTA
+            center_candidates = [
+                os.path.join(base_dir, 'Immagini', 'logo_tigota.png'),
+                os.path.join(base_dir, 'Immagini', 'logo_tigota_white.png'),
+                os.path.join(base_dir, 'Immagini', 'logo_tigota_transparent.png'),
+                os.path.join(base_dir, 'Immagini', 'logo_tigota.jpg'),
+                os.path.join(base_dir, 'Immagini', 'logo_tigota.jpeg'),
+                os.path.join(base_dir, 'Immagini', 'TIGOTA_logo.png'),
+            ]
+            center_logo_path = next((p for p in center_candidates if os.path.exists(p)), None)
+            if center_logo_path:
+                target_h_c = int(bar_height * 1.0)  # Massimo possibile: 100% dell'altezza
+                ext = os.path.splitext(center_logo_path)[1].lower()
+                if PIL_AVAILABLE:
+                    try:
+                        pil_logo = Image.open(center_logo_path)
+                        w, h = pil_logo.size
+                        if h > 0:
+                            scale = target_h_c / float(h)
+                            new_w = max(1, int(round(w * scale)))
+                            new_h = max(1, int(round(h * scale)))
+                            resample = Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS
+                            pil_logo = pil_logo.resize((new_w, new_h), resample)
+                        self._topbar_center_logo = ImageTk.PhotoImage(pil_logo)
+                    except Exception:
+                        self._topbar_center_logo = None
+                else:
+                    if ext in ('.png', '.gif'):
+                        try:
+                            img = tk.PhotoImage(file=center_logo_path)
+                            if img.height() > target_h_c:
+                                factor = max(1, img.height() // max(1, target_h_c))
+                                img = img.subsample(factor, factor)
+                            self._topbar_center_logo = img
+                        except Exception:
+                            self._topbar_center_logo = None
+
+            # Destra: icona NFC/info
+            icon_path = os.path.join(base_dir, 'Immagini', 'icon_badge_nfc_text_longbody_bigger_transparent_512.png')
+            if os.path.exists(icon_path):
+                target_h = int(bar_height * 0.82)
+                if PIL_AVAILABLE:
+                    try:
+                        pil_img = Image.open(icon_path)
+                        w, h = pil_img.size
+                        if h > 0:
+                            scale = target_h / float(h)
+                            new_w = max(1, int(round(w * scale)))
+                            new_h = max(1, int(round(h * scale)))
+                            resample = Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS
+                            pil_img = pil_img.resize((new_w, new_h), resample)
+                        self._topbar_icon = ImageTk.PhotoImage(pil_img)
+                    except Exception:
+                        self._topbar_icon = None
+                else:
+                    try:
+                        img = tk.PhotoImage(file=icon_path)
+                        if img.height() > target_h:
+                            factor = max(1, img.height() // max(1, target_h))
+                            img = img.subsample(factor, factor)
+                        self._topbar_icon = img
+                    except Exception:
+                        self._topbar_icon = None
+        except Exception:
+            self._topbar_icon = None
+
+        def redraw_logo(event=None):
+            canvas.delete('all')
+            h = bar_height
+            w = canvas.winfo_width() or self.vw
+            cx, cy = w // 2, h // 2
+            
+            # Centro: preferisci logo immagine, fallback al testo semplice (senza accento)
+            if getattr(self, '_topbar_center_logo', None) is not None:
+                try:
+                    canvas.create_image(cx, cy, image=self._topbar_center_logo, anchor='center')
+                except Exception:
+                    # Fallback testo semplice
+                    canvas.create_text(cx, cy, text='TIGOTA', anchor='center', font=brand_font, fill=BRAND_TEXT_COLOR)
+            else:
+                # Disegna solo il testo centrato senza accento (come nello screenshot)
+                canvas.create_text(cx, cy, text='TIGOTA', anchor='center', font=brand_font, fill=BRAND_TEXT_COLOR)
+
+            # Disegna icona in alto a sinistra (impostazioni) se disponibile
+            try:
+                if getattr(self, '_topbar_left_icon', None) is not None:
+                    margin_l = self.s(14)
+                    img_id_l = canvas.create_image(margin_l, cy, image=self._topbar_left_icon, anchor='w')
+                    def on_left_click(evt=None):
+                        self.open_settings_dialog()
+                    canvas.tag_bind(img_id_l, '<Button-1>', on_left_click)
+                    canvas.configure(cursor='hand2')
+            except Exception:
+                pass
+
+            # Disegna icona in alto a destra se disponibile
+            try:
+                if getattr(self, '_topbar_icon', None) is not None:
+                    margin = self.s(14)
+                    # Crea l'immagine e rendila cliccabile per aprire il wizard
+                    img_id = canvas.create_image(w - margin, cy, image=self._topbar_icon, anchor='e')
+                    def on_icon_click(evt=None):
+                        self.open_abbinamento_wizard()
+                    canvas.tag_bind(img_id, '<Button-1>', on_icon_click)
+                    canvas.configure(cursor='hand2')
+            except Exception:
+                pass
+
+
+        canvas.bind('<Configure>', redraw_logo)
+        topbar_frame.after(10, redraw_logo)
+
+    def open_abbinamento_wizard(self):
+        """Apre il wizard di abbinamento (singola istanza)."""
+        try:
+            # Se è già aperto, porta in primo piano e metti focus
+            if hasattr(self, '_abbinamento_wizard') and self._abbinamento_wizard and self._abbinamento_wizard.winfo_exists():
+                try:
+                    self._abbinamento_wizard.deiconify()
+                    self._abbinamento_wizard.lift()
+                    self._abbinamento_wizard.focus_force()
+                    return
+                except Exception:
+                    pass
+            from abbinamento_wizard import AbbinamentoWizard
+            # Crea nuova istanza e memorizza riferimento
+            self._abbinamento_wizard = AbbinamentoWizard(self.root)
+        except Exception as e:
+            print(f"[UI] Impossibile aprire wizard abbinamento: {e}")
+
+    def open_settings_dialog(self):
+        """Apre la finestra Impostazioni con i campi 'codice_sede', 'codice_negozio', 'ora trasferimento' e 'cartella trasferimento'."""
+        try:
+            from tkinter import messagebox, filedialog
+
+            # Helpers lettura/scrittura config_negozio.ini
+            def _config_path():
+                try:
+                    base_dir = os.path.dirname(os.path.abspath(__file__))
+                except Exception:
+                    base_dir = '.'
+                return os.path.join(base_dir, 'config_negozio.ini')
+
+            def _load_codes():
+                cfg = configparser.ConfigParser()
+                cfg.read(_config_path(), encoding='utf-8')
+                sede = ''
+                negozio = ''
+                if cfg.has_section('AZIENDA'):
+                    sede = cfg.get('AZIENDA', 'codice_sede', fallback='').strip()
+                    negozio = cfg.get('AZIENDA', 'codice_negozio', fallback='').strip()
+                # backward-compat: se non presenti, prova da [NEGOZIO].numero
+                if not negozio and cfg.has_section('NEGOZIO'):
+                    negozio = cfg.get('NEGOZIO', 'numero', fallback='').strip()
+                return sede, negozio
+
+            def _load_transfer():
+                cfg = configparser.ConfigParser()
+                cfg.read(_config_path(), encoding='utf-8')
+                # Default: 02:00 e cartella 'export' nella base dir
+                try:
+                    base_dir = os.path.dirname(os.path.abspath(__file__))
+                except Exception:
+                    base_dir = '.'
+                default_dir = os.path.join(base_dir, 'export')
+                ora = '02:00'
+                cartella = default_dir
+                if cfg.has_section('TRASFERIMENTO'):
+                    ora = cfg.get('TRASFERIMENTO', 'ora', fallback=ora).strip() or ora
+                    cartella = cfg.get('TRASFERIMENTO', 'cartella', fallback=cartella).strip() or cartella
+                return ora, cartella
+
+            def _save_codes(cod_sede: str, cod_negozio: str, ora_tx: str, dir_tx: str) -> bool:
+                try:
+                    path = _config_path()
+                    cfg = configparser.ConfigParser()
+                    # Leggi esistente per preservare le altre sezioni/chiavi
+                    cfg.read(path, encoding='utf-8')
+                    if not cfg.has_section('AZIENDA'):
+                        cfg.add_section('AZIENDA')
+                    cfg.set('AZIENDA', 'codice_sede', cod_sede.strip())
+                    cfg.set('AZIENDA', 'codice_negozio', cod_negozio.strip())
+                    # Sezione trasferimento
+                    if not cfg.has_section('TRASFERIMENTO'):
+                        cfg.add_section('TRASFERIMENTO')
+                    cfg.set('TRASFERIMENTO', 'ora', ora_tx.strip())
+                    cfg.set('TRASFERIMENTO', 'cartella', dir_tx.strip())
+                    # Aggiorna metadati in [SISTEMA]
+                    if not cfg.has_section('SISTEMA'):
+                        cfg.add_section('SISTEMA')
+                    cfg.set('SISTEMA', 'ultima_modifica', datetime.now().strftime('%Y-%m-%d'))
+                    # Scrivi file
+                    with open(path, 'w', encoding='utf-8') as f:
+                        cfg.write(f)
+                    return True
+                except Exception as e:
+                    print(f"[CFG] Errore salvataggio config: {e}")
+                    return False
+
+            # Crea finestra
+            win = tk.Toplevel(self.root)
+            win.title('Impostazioni')
+            # Full-screen touch modal per tablet
+            try:
+                sw = self.root.winfo_screenwidth()
+                sh = self.root.winfo_screenheight()
+            except Exception:
+                sw, sh = 1280, 800
+            try:
+                win.attributes('-fullscreen', True)
+            except Exception:
+                win.geometry(f"{sw}x{sh}+0+0")
+            win.configure(bg='#FFFFFF')
+            # Allinea al wizard: tieni topmost per affidabilità focus/tastiera
+            try:
+                win.attributes('-topmost', True)
+            except Exception:
+                pass
+            win.transient(self.root)
+            win.grab_set()
+
+            # Stili (touch-friendly, più grandi per full-screen)
+            title_font = ('Segoe UI', max(24, int(self.s(32))), 'bold')
+            label_font = ('Segoe UI', max(18, int(self.s(22))))
+            entry_font = ('Segoe UI', max(18, int(self.s(22))))
+            btn_font = ('Segoe UI', max(18, int(self.s(22))), 'bold')
+
+            container = tk.Frame(win, bg='#FFFFFF')
+            container.pack(fill='both', expand=True, padx=self.s(32), pady=self.s(28))
+
+            # Header con titolo centrato e Annulla a destra (grid 3 colonne)
+            header = tk.Frame(container, bg='#FFFFFF')
+            header.pack(fill='x', pady=(0, self.s(12)))
+            header.grid_columnconfigure(0, weight=1)
+            header.grid_columnconfigure(1, weight=0)
+            header.grid_columnconfigure(2, weight=1)
+            # Spaziatore sx
+            tk.Label(header, text='', bg='#FFFFFF').grid(row=0, column=0, sticky='ew')
+            # Titolo centrato
+            tk.Label(header, text='Impostazioni', font=title_font, bg='#FFFFFF', fg='#5FA8AF').grid(row=0, column=1, sticky='n')
+            # Pulsante Annulla a destra (configurato dopo per chiudere anche la tastiera)
+            btn_cancel = tk.Button(header, text='Annulla', font=btn_font, command=win.destroy)
+            btn_cancel.grid(row=0, column=2, sticky='e')
+
+            form = tk.Frame(container, bg='#FFFFFF')
+            form.pack(fill='x', expand=False, pady=(self.s(12), 0))
+
+            # Campi
+            tk.Label(form, text='Codice Sede', font=label_font, bg='#FFFFFF').grid(row=0, column=0, sticky='w', pady=(0, self.s(8)))
+            sede_var = tk.StringVar()
+            sede_entry = tk.Entry(form, textvariable=sede_var, font=entry_font)
+            sede_entry.grid(row=0, column=1, sticky='ew', padx=(self.s(16), 0), pady=(0, self.s(12)), ipady=self.s(10))
+
+            tk.Label(form, text='Codice Negozio', font=label_font, bg='#FFFFFF').grid(row=1, column=0, sticky='w', pady=(0, self.s(8)))
+            negozio_var = tk.StringVar()
+            negozio_entry = tk.Entry(form, textvariable=negozio_var, font=entry_font)
+            negozio_entry.grid(row=1, column=1, sticky='ew', padx=(self.s(16), 0), pady=(0, self.s(12)), ipady=self.s(10))
+
+            # Ora trasferimento (HH:MM)
+            tk.Label(form, text='Ora trasferimento (HH:MM)', font=label_font, bg='#FFFFFF').grid(row=2, column=0, sticky='w', pady=(0, self.s(8)))
+            ora_var = tk.StringVar()
+            ora_entry = tk.Entry(form, textvariable=ora_var, font=entry_font)
+            ora_entry.grid(row=2, column=1, sticky='ew', padx=(self.s(16), 0), pady=(0, self.s(12)), ipady=self.s(10))
+
+            # Cartella trasferimento con Sfoglia
+            tk.Label(form, text='Cartella trasferimento', font=label_font, bg='#FFFFFF').grid(row=3, column=0, sticky='w', pady=(0, self.s(8)))
+            dir_var = tk.StringVar()
+            dir_entry = tk.Entry(form, textvariable=dir_var, font=entry_font)
+            dir_entry.grid(row=3, column=1, sticky='ew', padx=(self.s(16), 0), pady=(0, self.s(12)), ipady=self.s(10))
+            def on_browse():
+                initial = dir_var.get().strip() or os.path.dirname(os.path.abspath(__file__))
+                chosen = filedialog.askdirectory(mustexist=False, initialdir=initial)
+                if chosen:
+                    dir_var.set(chosen)
+            browse_btn = tk.Button(form, text='Sfoglia...', font=btn_font, command=on_browse)
+            browse_btn.grid(row=3, column=2, sticky='w', padx=(self.s(12), 0), pady=(0, self.s(12)))
+
+            form.grid_columnconfigure(1, weight=1)
+            form.grid_columnconfigure(2, weight=0)
+
+            # Carica valori correnti
+            cur_sede, cur_negozio = _load_codes()
+            cur_ora, cur_dir = _load_transfer()
+            sede_var.set(cur_sede)
+            negozio_var.set(cur_negozio)
+            ora_var.set(cur_ora)
+            dir_var.set(cur_dir)
+
+            # Note
+            note = tk.Label(container, text='I campi sono obbligatori. Usare solo cifre/lettere senza spazi.', font=('Segoe UI', max(14, int(self.s(18)))), bg='#FFFFFF', fg='#6B7280')
+            note.pack(anchor='w', pady=(self.s(10), self.s(16)))
+
+            # Pulsanti
+            btns = tk.Frame(container, bg='#FFFFFF')
+            btns.pack(fill='x', pady=(self.s(16), 0))
+
+            # --- Gestione messaggi modali/topmost e chiusura tastiera/finestra ---
+            def _show_message(kind: str, title: str, text: str):
+                # Dialog modale touch-friendly in stile TIGOTÀ
+                try:
+                    win.update_idletasks()
+                except Exception:
+                    pass
+                try:
+                    dlg = tk.Toplevel(win)
+                    try:
+                        dlg.transient(win)
+                        dlg.attributes('-topmost', True)
+                        dlg.resizable(False, False)
+                    except Exception:
+                        pass
+                    dlg.configure(bg='#FFFFFF')
+
+                    # Tema TIGOTÀ
+                    brand = '#5FA8AF'
+                    ok_bg = '#20B2AA'
+                    warn = '#F59E0B'
+                    err = '#EF4444'
+                    header_bg = brand if kind == 'info' else (warn if kind == 'warning' else err)
+                    btn_bg = ok_bg if kind == 'info' else header_bg
+
+                    # Dimensioni touch
+                    try:
+                        s = self.s
+                    except Exception:
+                        s = lambda v: v
+                    width = max(360, min(640, int((getattr(self, 'vw', 800) or 800) * 0.48)))
+
+                    # Header brand
+                    header = tk.Frame(dlg, bg=header_bg)
+                    header.pack(fill='x')
+                    tk.Label(header, text=title, font=('Segoe UI', s(22)), fg='#FFFFFF', bg=header_bg, padx=s(16), pady=s(10)).pack(anchor='w')
+
+                    # Corpo
+                    body = tk.Frame(dlg, bg='#FFFFFF')
+                    body.pack(fill='both', expand=True, padx=s(18), pady=s(16))
+                    tk.Label(body, text=text, font=('Segoe UI', s(16)), fg='#374151', bg='#FFFFFF', justify='left', wraplength=width - s(36)).pack(anchor='w')
+
+                    # Pulsante OK grande
+                    btn = tk.Button(
+                        body,
+                        text='OK',
+                        font=('Segoe UI', s(18), 'bold'),
+                        bg=btn_bg,
+                        fg='#FFFFFF',
+                        activebackground=btn_bg,
+                        activeforeground='#FFFFFF',
+                        relief='raised',
+                        bd=2,
+                        command=dlg.destroy
                     )
-                except AttributeError:
-                    print("⚠️ Metodo save_badge_pairing non implementato nel database")
-                    # TEMPORANEO: simula successo per demo
-                    success = True
-                    print(f"📝 DEMO: Abbinamento salvato -> {badge_code} : {nfc_value} ({name_desc})")
-                
-            if success:
-                # Reset form
-                self.badge_entry.delete(0, tk.END)
-                self.badge_entry.configure(bg='#FFFFFF')
-                self.nfc_entry.delete(0, tk.END)
-                self.nfc_entry.configure(bg='#FFFFFF')
-                self.name_entry.delete(0, tk.END)
-                
-                # Aggiorna lista
-                self.refresh_pairings_list()
-                
-                # Feedback successo
-                self.show_notification(f"✅ Abbinamento salvato: {badge_code} → {nfc_value}")
-            else:
-                self.show_notification("❌ Errore salvataggio abbinamento")
-                
-        except Exception as e:
-            print(f"❌ Errore salvataggio abbinamento: {e}")
-            self.show_notification("❌ Errore durante il salvataggio")
-            
-    def load_existing_pairings(self, parent):
-        """Carica e visualizza abbinamenti esistenti"""
-        try:
-            # TEMPORANEO: Database potrebbe non avere ancora il metodo get_badge_pairings
-            if hasattr(self, 'database_manager') and self.database_manager:
+                    btn.pack(fill='x', pady=(s(16), 0), ipadx=s(12), ipady=s(10))
+
+                    # Posizionamento centrato
+                    try:
+                        dlg.update_idletasks()
+                        dw = max(width, dlg.winfo_width())
+                        dh = dlg.winfo_height()
+                        pw = max(800, win.winfo_width())
+                        ph = max(600, win.winfo_height())
+                        px = win.winfo_rootx(); py = win.winfo_rooty()
+                        x = px + (pw - dw) // 2
+                        y = py + (ph - dh) // 2
+                        dlg.geometry(f"{dw}x{dh}+{max(0,x)}+{max(0,y)}")
+                    except Exception:
+                        pass
+
+                    # Modalità
+                    try:
+                        dlg.grab_set()
+                        dlg.lift()
+                        dlg.focus_force()
+                        btn.focus_set()
+                        dlg.bind('<Escape>', lambda e: dlg.destroy())
+                        dlg.bind('<Return>', lambda e: dlg.destroy())
+                    except Exception:
+                        pass
+                    dlg.wait_window()
+                except Exception:
+                    # Fallback
+                    try:
+                        messagebox.showinfo(title, text, parent=win)
+                    except Exception:
+                        pass
+
+            def _close_touch_keyboard():
+                # Chiusura/Hide robusta (come nel wizard): SC_CLOSE, WM_CLOSE e ShowWindow(SW_HIDE)
                 try:
-                    pairings = self.database_manager.get_badge_pairings()
-                except AttributeError:
-                    print("⚠️ Metodo get_badge_pairings non implementato nel database")
-                    pairings = []
-            else:
-                pairings = []  # Fallback se database non disponibile
-            
-            # Esempio di abbinamenti di default se il database è vuoto o non supportato
-            if not pairings:
-                pairings = [
-                    {'badge_code': '0123456789', 'nfc_value': 'A1B2C3D4E5F6', 'description': 'Badge Demo Amministratore'},
-                    {'badge_code': '9876543210', 'nfc_value': 'F6E5D4C3B2A1', 'description': 'Badge Demo Dipendente'},
-                    {'badge_code': '1122334455', 'nfc_value': 'BC12331313AB', 'description': 'PICCOLI GIOVANNI'}
-                ]
-            
-            # Visualizza ogni abbinamento
-            for i, pairing in enumerate(pairings):
-                self.create_pairing_row(parent, pairing, i)
-                
-        except Exception as e:
-            print(f"❌ Errore caricamento abbinamenti: {e}")
-            # Mostra riga di errore
-            error_frame = tk.Frame(parent, bg='#FFEBEE')
-            error_frame.pack(fill='x', padx=10, pady=5)
-            
-            error_label = tk.Label(error_frame,
-                                  text="⚠️ Database in fase di configurazione - Usando dati demo",
-                                  font=('Segoe UI', 10),
-                                  bg='#FFEBEE',
-                                  fg='#FF9800')
-            error_label.pack(pady=10)
-            
-    def create_pairing_row(self, parent, pairing, index):
-        """Crea riga per singolo abbinamento"""
-        # Colore alternato per le righe
-        bg_color = '#FAFAFA' if index % 2 == 0 else '#FFFFFF'
-        
-        row_frame = tk.Frame(parent, bg=bg_color, relief='solid', bd=1)
-        row_frame.pack(fill='x', padx=10, pady=2)
-        
-        # Contenuto riga
-        content_frame = tk.Frame(row_frame, bg=bg_color)
-        content_frame.pack(fill='x', padx=10, pady=8)
-        
-        # Badge code
-        badge_label = tk.Label(content_frame,
-                              text=pairing.get('badge_code', 'N/A'),
-                              font=('Consolas', 10, 'bold'),
-                              bg=bg_color,
-                              fg='#1565C0',
-                              width=15)
-        badge_label.pack(side='left', padx=5)
-        
-        # NFC value
-        nfc_label = tk.Label(content_frame,
-                            text=pairing.get('nfc_value', 'N/A'),
-                            font=('Consolas', 10),
-                            bg=bg_color,
-                            fg='#333333',
-                            width=20)
-        nfc_label.pack(side='left', padx=5)
-        
-        # Description
-        desc_label = tk.Label(content_frame,
-                             text=pairing.get('description', 'N/A'),
-                             font=('Segoe UI', 10),
-                             bg=bg_color,
-                             fg='#333333',
-                             width=25,
-                             anchor='w')
-        desc_label.pack(side='left', padx=5)
-        
-        # Pulsanti azioni
-        actions_frame = tk.Frame(content_frame, bg=bg_color)
-        actions_frame.pack(side='left', padx=5)
-        
-        # Pulsante elimina
-        delete_btn = tk.Button(actions_frame,
-                              text="🗑️",
-                              font=('Segoe UI Emoji', 10),
-                              bg='#F44336',
-                              fg='#FFFFFF',
-                              relief='flat',
-                              width=3,
-                              cursor='hand2',
-                              command=lambda: self.delete_pairing(pairing))
-        delete_btn.pack(side='left', padx=2)
-        
-        # Pulsante modifica
-        edit_btn = tk.Button(actions_frame,
-                            text="✏️",
-                            font=('Segoe UI Emoji', 10),
-                            bg='#FF9800',
-                            fg='#FFFFFF',
-                            relief='flat',
-                            width=3,
-                            cursor='hand2',
-                            command=lambda: self.edit_pairing(pairing))
-        edit_btn.pack(side='left', padx=2)
-        
-    def refresh_pairings_list(self):
-        """Aggiorna lista abbinamenti"""
-        try:
-            # Pulisce frame esistente
-            for widget in self.pairings_scrollable_frame.winfo_children():
-                if widget.winfo_class() != 'Frame' or 'header' not in str(widget):
-                    widget.destroy()
-            
-            # Ricarica abbinamenti
-            self.load_existing_pairings(self.pairings_scrollable_frame)
-            
-        except Exception as e:
-            print(f"❌ Errore refresh lista: {e}")
-            
-    def delete_pairing(self, pairing):
-        """Elimina abbinamento"""
-        try:
-            # Conferma eliminazione
-            import tkinter.messagebox as msgbox
-            
-            result = msgbox.askyesno(
-                "Conferma Eliminazione",
-                f"Eliminare l'abbinamento?\n\nBadge: {pairing.get('badge_code')}\nNFC: {pairing.get('nfc_value')}",
-                icon='warning'
-            )
-            
-            if result:
-                if hasattr(self, 'database_manager') and self.database_manager:
-                    success = self.database_manager.delete_badge_pairing(pairing.get('badge_code'))
-                    
-                    if success:
-                        self.refresh_pairings_list()
-                        self.show_notification(f"✅ Abbinamento eliminato: {pairing.get('badge_code')}")
+                    import ctypes
+                    user32 = ctypes.windll.user32
+                    WM_SYSCOMMAND = 0x0112
+                    SC_CLOSE = 0xF060
+                    WM_CLOSE = 0x0010
+                    SW_HIDE = 0
+                    for cls in ('IPTip_Main_Window', 'OSKMainClass'):
+                        try:
+                            hwnd = user32.FindWindowW(cls, None)
+                        except Exception:
+                            hwnd = 0
+                        if hwnd:
+                            try:
+                                user32.PostMessageW(hwnd, WM_SYSCOMMAND, SC_CLOSE, 0)
+                            except Exception:
+                                pass
+                            try:
+                                user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+                            except Exception:
+                                pass
+                            try:
+                                user32.ShowWindow(hwnd, SW_HIDE)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+                # Best-effort: chiudi solo OSK se attivo (evitiamo kill di TabTip)
+                try:
+                    import subprocess
+                    subprocess.Popen(['taskkill', '/IM', 'osk.exe', '/F'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x08000000)
+                except Exception:
+                    pass
+
+            def _on_close_settings():
+                try:
+                    _close_touch_keyboard()
+                except Exception:
+                    pass
+                try:
+                    win.destroy()
+                except Exception:
+                    pass
+
+            try:
+                win.protocol('WM_DELETE_WINDOW', _on_close_settings)
+            except Exception:
+                pass
+
+            # Configura il pulsante Annulla per usare la chiusura personalizzata
+            try:
+                btn_cancel.configure(command=_on_close_settings)
+            except Exception:
+                pass
+
+            def on_save():
+                cod_sede = (sede_var.get() or '').strip()
+                cod_negozio = (negozio_var.get() or '').strip()
+                ora_tx = (ora_var.get() or '').strip()
+                dir_tx = (dir_var.get() or '').strip()
+                # Validazione semplice
+                if not cod_sede or not cod_negozio:
+                    _show_message('warning', 'Campi obbligatori', 'Inserisci sia Codice Sede che Codice Negozio.')
+                    return
+                # Evita caratteri non alfanumerici (consentiamo /-?_ al bisogno, ma manteniamo semplice)
+                def _valid(s):
+                    return all(c.isalnum() for c in s)
+                if not _valid(cod_sede) or not _valid(cod_negozio):
+                    _show_message('warning', 'Formato non valido', 'Usa solo lettere e numeri, senza spazi.')
+                    return
+                # Validazione ora HH:MM 24h
+                import re
+                if not re.fullmatch(r"([01]?\d|2[0-3]):[0-5]\d", ora_tx):
+                    _show_message('warning', 'Ora non valida', 'Inserisci l\'ora nel formato HH:MM (24h).')
+                    return
+                # Validazione directory
+                if not dir_tx:
+                    _show_message('warning', 'Cartella mancante', 'Seleziona la cartella di trasferimento.')
+                    return
+                # Crea la cartella se non esiste
+                try:
+                    os.makedirs(dir_tx, exist_ok=True)
+                except Exception as e:
+                    _show_message('error', 'Errore cartella', f'Impossibile creare/accedere alla cartella:\n{dir_tx}\n{e}')
+                    return
+
+                if _save_codes(cod_sede, cod_negozio, ora_tx, dir_tx):
+                    # Mostra conferma sopra alla finestra Impostazioni
+                    try:
+                        win.lift(); win.focus_force()
+                    except Exception:
+                        pass
+                    _show_message('info', 'Salvato', 'Impostazioni salvate correttamente.')
+                    try:
+                        _close_touch_keyboard()
+                    except Exception:
+                        pass
+                    win.destroy()
+                    # Riavvia scheduler trasferimento per applicare la nuova ora
+                    try:
+                        self._restart_transfer_scheduler()
+                    except Exception as e:
+                        print(f"[TRANSFER] Riavvio scheduler fallito: {e}")
+                else:
+                    _show_message('error', 'Errore', 'Impossibile salvare le impostazioni.')
+
+            # Pulsante Salva
+            save_btn = tk.Button(btns, text='Salva', font=btn_font, command=on_save)
+            save_btn.pack(side='left', ipadx=self.s(24), ipady=self.s(12))
+
+            # Pulsante Esporta ora (esegue export immediato delle timbrature pending)
+            def on_export_now():
+                try:
+                    _close_touch_keyboard()
+                except Exception:
+                    pass
+                # Conta pending prima di esportare per feedback
+                try:
+                    from database_sqlite import get_database_manager
+                    db = get_database_manager()
+                    pending = db.get_timbrature_pending()
+                    count = len(pending)
+                except Exception:
+                    count = None
+                ok = False
+                try:
+                    ok = self.export_pending_timbrature_to_txt()
+                except Exception:
+                    ok = False
+                if ok:
+                    if count is not None:
+                        _show_message('info', 'Export completato', f'Esportate {count} timbrature pending in TXT.')
                     else:
-                        self.show_notification("❌ Errore eliminazione abbinamento")
+                        _show_message('info', 'Export completato', 'File TXT generato nella cartella di trasferimento.')
                 else:
-                    self.show_notification("❌ Database non disponibile")
-                    
-        except Exception as e:
-            print(f"❌ Errore eliminazione: {e}")
-            
-    def edit_pairing(self, pairing):
-        """Modifica abbinamento esistente"""
-        try:
-            # Popola i campi del form con i dati esistenti
-            self.badge_entry.delete(0, tk.END)
-            self.badge_entry.insert(0, pairing.get('badge_code', ''))
-            
-            self.nfc_entry.delete(0, tk.END)
-            self.nfc_entry.insert(0, pairing.get('nfc_value', ''))
-            
-            self.name_entry.delete(0, tk.END)
-            self.name_entry.insert(0, pairing.get('description', ''))
-            
-            # Feedback
-            self.show_notification(f"📝 Modifica abbinamento: {pairing.get('badge_code')}")
-            
-        except Exception as e:
-            print(f"❌ Errore modifica: {e}")
-            
-    def show_numeric_keypad(self, field_type):
-        """Mostra tastierino professionale per tablet touch - BADGE NUMERICO / NOME ALFANUMERICO"""
-        try:
-            # GESTISCE BADGE (numerico) e NOME (alfanumerico) - Il campo NFC usa esclusivamente il lettore hardware
-            if field_type not in ['badge', 'name']:
-                print("⚠️ Tastierino disponibile solo per badge e nome - NFC usa lettore hardware")
-                return
-                
-            # Crea finestra tastierino modal
-            keypad_window = tk.Toplevel(self.root)
-            keypad_window.configure(bg='#F5F5F5')
-            keypad_window.resizable(False, False)
-            
-            # Dimensioni e configurazione in base al tipo
-            if field_type == 'badge':
-                window_width = 500
-                window_height = 750
-                title_text = "Inserisci Codice Badge Numerico"
-                keypad_window.title("Tastierino Badge | TIGOTÀ Elite")
-            else:  # name
-                window_width = 1300  # Finestra molto più larga
-                window_height = 1000   # Altezza aumentata per dare più spazio al pulsante
-                title_text = "Inserisci Nome/Descrizione"
-                keypad_window.title("Tastierino Nome | TIGOTÀ Elite")
-            
-            # Centra finestra
-            screen_width = self.root.winfo_screenwidth()
-            screen_height = self.root.winfo_screenheight()
-            x = (screen_width - window_width) // 2
-            y = (screen_height - window_height) // 2
-            
-            keypad_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
-            keypad_window.attributes('-topmost', True)
-            keypad_window.grab_set()  # Modal
-            
-            # Header del tastierino
-            header_frame = tk.Frame(keypad_window, bg='#1E88E5', height=60)
-            header_frame.pack(fill='x')
-            header_frame.pack_propagate(False)
-            
-            header_content = tk.Frame(header_frame, bg='#1E88E5')
-            header_content.pack(expand=True, fill='both', padx=20, pady=15)
-            
-            # Icona e titolo
-            if field_type == 'badge':
-                icon_text = "🔢"
-            else:  # name
-                icon_text = "✏️"
-                
-            icon_label = tk.Label(header_content,
-                                 text=icon_text,
-                                 font=('Segoe UI Emoji', 20),
-                                 bg='#1E88E5',
-                                 fg='#FFFFFF')
-            icon_label.pack(side='left')
-            
-            title_label = tk.Label(header_content,
-                                  text=title_text,
-                                  font=('Segoe UI', 14, 'bold'),
-                                  bg='#1E88E5',
-                                  fg='#FFFFFF')
-            title_label.pack(side='left', padx=(10, 0))
-            
-            # Area display input
-            display_frame = tk.Frame(keypad_window, bg='#F5F5F5')
-            display_frame.pack(fill='x', padx=20, pady=15)
-            
-            # Entry display con valore corrente
-            self.keypad_display = tk.Entry(display_frame,
-                                          font=('Consolas', 16, 'bold'),
-                                          relief='solid',
-                                          bd=2,
-                                          justify='center',
-                                          state='readonly')
-            self.keypad_display.pack(fill='x', ipady=10)
-            
-            # Ottieni valore corrente dal campo appropriato
-            if field_type == 'badge':
-                current_value = self.badge_entry.get()
-            else:  # name
-                current_value = self.name_entry.get()
-                
-            # Pulisce valori placeholder e messaggi di sistema
-            if current_value in ["👆 Tocca per tastierino"]:
-                current_value = ""
-                
-            # Imposta valore corrente
-            self.keypad_display.config(state='normal')
-            self.keypad_display.delete(0, tk.END)
-            self.keypad_display.insert(0, current_value)
-            self.keypad_display.config(state='readonly')
-            
-            # Area tastierino
-            keypad_frame = tk.Frame(keypad_window, bg='#F5F5F5')
-            keypad_frame.pack(expand=True, fill='both', padx=20, pady=(0, 15))
-            
-            # Crea layout tastierino in base al tipo
-            if field_type == 'badge':
-                self.create_numeric_keypad(keypad_frame, keypad_window, field_type)
-            else:  # name
-                self.create_full_alphanumeric_keypad(keypad_frame, keypad_window, field_type)
-                
-        except Exception as e:
-            print(f"❌ Errore tastierino: {e}")
-            
-    def create_numeric_keypad(self, parent, window, field_type):
-        """Crea tastierino numerico per badge"""
-        # Layout numerico 3x4 + controlli
-        buttons_frame = tk.Frame(parent, bg='#F5F5F5')
-        buttons_frame.pack(expand=True, pady=10)
-        
-        # Numeri 1-9
-        for i in range(1, 10):
-            row = (i - 1) // 3
-            col = (i - 1) % 3
-            
-            btn = tk.Button(buttons_frame,
-                           text=str(i),
-                           font=('Arial', 18, 'bold'),
-                           bg='#FFFFFF',
-                           fg='#333333',
-                           relief='solid',
-                           bd=1,
-                           width=4,
-                           height=2,
-                           cursor='hand2',
-                           command=lambda num=i: self.keypad_input(str(num)))
-            btn.grid(row=row, column=col, padx=5, pady=5, sticky='nsew')
-            
-            # Configura peso grid
-            buttons_frame.grid_rowconfigure(row, weight=1)
-            buttons_frame.grid_columnconfigure(col, weight=1)
-        
-        # Riga finale: Cancella, 0, Backspace
-        # Cancella tutto
-        clear_btn = tk.Button(buttons_frame,
-                             text="C",
-                             font=('Arial', 16, 'bold'),
-                             bg='#F44336',
-                             fg='#FFFFFF',
-                             relief='solid',
-                             bd=1,
-                             width=4,
-                             height=2,
-                             cursor='hand2',
-                             command=self.keypad_clear)
-        clear_btn.grid(row=3, column=0, padx=5, pady=5, sticky='nsew')
-        
-        # Zero
-        zero_btn = tk.Button(buttons_frame,
-                            text="0",
-                            font=('Arial', 18, 'bold'),
-                            bg='#FFFFFF',
-                            fg='#333333',
-                            relief='solid',
-                            bd=1,
-                            width=4,
-                            height=2,
-                            cursor='hand2',
-                            command=lambda: self.keypad_input("0"))
-        zero_btn.grid(row=3, column=1, padx=5, pady=5, sticky='nsew')
-        
-        # Backspace
-        back_btn = tk.Button(buttons_frame,
-                            text="⌫",
-                            font=('Arial', 16, 'bold'),
-                            bg='#FF9800',
-                            fg='#FFFFFF',
-                            relief='solid',
-                            bd=1,
-                            width=4,
-                            height=2,
-                            cursor='hand2',
-                            command=self.keypad_backspace)
-        back_btn.grid(row=3, column=2, padx=5, pady=5, sticky='nsew')
-        
-        # Configura peso ultima riga
-        buttons_frame.grid_rowconfigure(3, weight=1)
-        
-        # PULSANTE CONFERMA SUPER LEGGIBILE E IMPOSSIBILE DA PERDERE
-        confirm_frame = tk.Frame(parent, bg='#F5F5F5')
-        confirm_frame.pack(fill='x', pady=(25, 15), padx=15)  # Ancora più spazio
-        
-        # Etichetta molto evidente
-        confirm_label = tk.Label(confirm_frame,
-                                text="👇 TOCCA QUI PER CONFERMARE 👇",
-                                font=('Arial', 16, 'bold'),  # Font più grande
-                                bg='#F5F5F5',
-                                fg='#1976D2')  # Blu più scuro per contrasto
-        confirm_label.pack(pady=(0, 10))
-        
-        # Pulsante conferma GIGANTE con massimo contrasto
-        big_confirm_btn = tk.Button(confirm_frame,
-                                   text="✅ CONFERMA",
-                                   font=('Arial', 28, 'bold'),  # Font ENORME
-                                   bg='#4CAF50',  # Verde brillante
-                                   fg='#FFFFFF',  # Bianco puro
-                                   activebackground='#45a049',  # Verde più scuro quando premuto
-                                   activeforeground='#FFFFFF',
-                                   relief='raised',  # Effetto 3D molto evidente
-                                   bd=8,  # Bordo MOLTO spesso
-                                   width=18,  # Larghezza ottimale
-                                   height=4,  # Altezza maggiore
-                                   cursor='hand2',
-                                   highlightthickness=0,
-                                   command=lambda: self.keypad_confirm(window, field_type))
-        big_confirm_btn.pack(pady=20, padx=10, fill='x')  # Molto spazio e fill completo
-        
-        # Pulsanti azione (più piccoli ora)
-        self.create_keypad_action_buttons(parent, window, field_type)
-        
-    def create_alphanumeric_keypad(self, parent, window, field_type):
-        """Crea tastierino alfanumerico per NFC"""
-        # Container principale
-        keypad_container = tk.Frame(parent, bg='#F5F5F5')
-        keypad_container.pack(expand=True, pady=10)
-        
-        # Prima sezione: Numeri 0-9
-        numbers_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        numbers_frame.pack(pady=(0, 10))
-        
-        numbers_label = tk.Label(numbers_frame,
-                                text="Numeri:",
-                                font=('Segoe UI', 12, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#333333')
-        numbers_label.pack()
-        
-        num_buttons_frame = tk.Frame(numbers_frame, bg='#F5F5F5')
-        num_buttons_frame.pack(pady=5)
-        
-        # Numeri in 2 righe (0-4, 5-9)
-        for i in range(10):
-            row = i // 5
-            col = i % 5
-            
-            btn = tk.Button(num_buttons_frame,
-                           text=str(i),
-                           font=('Arial', 14, 'bold'),
-                           bg='#E3F2FD',
-                           fg='#1565C0',
-                           relief='solid',
-                           bd=1,
-                           width=3,
-                           height=2,
-                           cursor='hand2',
-                           command=lambda num=i: self.keypad_input(str(num)))
-            btn.grid(row=row, column=col, padx=2, pady=2)
-        
-        # Seconda sezione: Lettere A-F (comuni per codici hex)
-        letters_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        letters_frame.pack(pady=(0, 10))
-        
-        letters_label = tk.Label(letters_frame,
-                                text="Lettere (A-F):",
-                                font=('Segoe UI', 12, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#333333')
-        letters_label.pack()
-        
-        letters_buttons_frame = tk.Frame(letters_frame, bg='#F5F5F5')
-        letters_buttons_frame.pack(pady=5)
-        
-        hex_letters = ['A', 'B', 'C', 'D', 'E', 'F']
-        for i, letter in enumerate(hex_letters):
-            btn = tk.Button(letters_buttons_frame,
-                           text=letter,
-                           font=('Arial', 14, 'bold'),
-                           bg='#E8F5E8',
-                           fg='#2E7D32',
-                           relief='solid',
-                           bd=1,
-                           width=3,
-                           height=2,
-                           cursor='hand2',
-                           command=lambda l=letter: self.keypad_input(l))
-            btn.grid(row=0, column=i, padx=2, pady=2)
-        
-        # Controlli
-        controls_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        controls_frame.pack(pady=10)
-        
-        # Cancella tutto
-        clear_btn = tk.Button(controls_frame,
-                             text="Cancella Tutto",
-                             font=('Arial', 12, 'bold'),
-                             bg='#F44336',
-                             fg='#FFFFFF',
-                             relief='solid',
-                             bd=1,
-                             padx=20,
-                             pady=8,
-                             cursor='hand2',
-                             command=self.keypad_clear)
-        clear_btn.pack(side='left', padx=5)
-        
-        # Backspace
-        back_btn = tk.Button(controls_frame,
-                            text="⌫ Cancella",
-                            font=('Arial', 12, 'bold'),
-                            bg='#FF9800',
-                            fg='#FFFFFF',
-                            relief='solid',
-                            bd=1,
-                            padx=20,
-                            pady=8,
-                            cursor='hand2',
-                            command=self.keypad_backspace)
-        back_btn.pack(side='left', padx=5)
-        
-        # PULSANTE CONFERMA SUPER LEGGIBILE per NFC
-        confirm_frame_nfc = tk.Frame(keypad_container, bg='#F5F5F5')
-        confirm_frame_nfc.pack(pady=(35, 20), padx=15, fill='x')  # Ancora più spazio
-        
-        # Etichetta esplicativa molto evidente per NFC
-        confirm_label_nfc = tk.Label(confirm_frame_nfc,
-                                    text="👇 TOCCA QUI PER CONFERMARE 👇",
-                                    font=('Arial', 16, 'bold'),  # Font più grande
-                                    bg='#F5F5F5',
-                                    fg='#1976D2')  # Blu più scuro per contrasto
-        confirm_label_nfc.pack(pady=(0, 10))
-        
-        # Pulsante conferma GIGANTE con massimo contrasto per NFC
-        big_confirm_btn_nfc = tk.Button(confirm_frame_nfc,
-                                       text="✅ CONFERMA",
-                                       font=('Arial', 28, 'bold'),  # Font ENORME
-                                       bg='#4CAF50',  # Verde brillante
-                                       fg='#FFFFFF',  # Bianco puro
-                                       activebackground='#45a049',  # Verde più scuro quando premuto
-                                       activeforeground='#FFFFFF',
-                                       relief='raised',  # Effetto 3D molto evidente
-                                       bd=8,  # Bordo MOLTO spesso
-                                       width=18,  # Larghezza ottimale
-                                       height=4,  # Altezza maggiore
-                                       cursor='hand2',
-                                       highlightthickness=0,
-                                       command=lambda: self.keypad_confirm(window, field_type))
-        big_confirm_btn_nfc.pack(pady=20, padx=10, fill='x')  # Molto spazio e fill completo
-        
-        # Pulsanti azione (più piccoli ora)
-        self.create_keypad_action_buttons(parent, window, field_type)
-        
-    def create_full_alphanumeric_keypad(self, parent, window, field_type):
-        """Crea tastierino alfanumerico completo per nome/descrizione"""
-        # Container principale SEMPLICE senza scroll
-        keypad_container = tk.Frame(parent, bg='#F5F5F5')
-        keypad_container.pack(expand=True, fill='both', pady=10, padx=20)
-        
-        # Prima sezione: Lettere A-Z
-        letters_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        letters_frame.pack(pady=(0, 10))
-        
-        letters_label = tk.Label(letters_frame,
-                                text="Lettere:",
-                                font=('Segoe UI', 12, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#333333')
-        letters_label.pack()
-        
-        letters_buttons_frame = tk.Frame(letters_frame, bg='#F5F5F5')
-        letters_buttons_frame.pack(pady=5)
-        
-        # Lettere in 3 righe QWERTY-like CON TASTI INGRANDITI
-        qwerty_rows = [
-            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-            ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-            ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
-        ]
-        
-        for row_index, row_letters in enumerate(qwerty_rows):
-            row_frame = tk.Frame(letters_buttons_frame, bg='#F5F5F5')
-            row_frame.pack(pady=5)  # Più spazio tra righe
-            
-            for letter in row_letters:
-                btn = tk.Button(row_frame,
-                               text=letter,
-                               font=('Arial', 16, 'bold'),  # Font ingrandito
-                               bg='#E3F2FD',
-                               fg='#1565C0',
-                               relief='solid',
-                               bd=1,
-                               width=4,  # Larghezza aumentata
-                               height=2,  # Altezza mantenuta
-                               cursor='hand2',
-                               command=lambda l=letter: self.keypad_input(l))
-                btn.pack(side='left', padx=3, pady=3)  # Spazio leggermente aumentato
-        
-        # Seconda sezione: Numeri 0-9
-        numbers_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        numbers_frame.pack(pady=(0, 10))
-        
-        numbers_label = tk.Label(numbers_frame,
-                                text="Numeri:",
-                                font=('Segoe UI', 12, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#333333')
-        numbers_label.pack()
-        
-        num_buttons_frame = tk.Frame(numbers_frame, bg='#F5F5F5')
-        num_buttons_frame.pack(pady=5)
-        
-        # Numeri in 1 riga (0-9) DIMENSIONI AUMENTATE
-        for i in range(10):
-            btn = tk.Button(num_buttons_frame,
-                           text=str(i),
-                           font=('Arial', 16, 'bold'),  # Font ingrandito
-                           bg='#E8F5E8',
-                           fg='#2E7D32',
-                           relief='solid',
-                           bd=1,
-                           width=4,  # Larghezza aumentata
-                           height=2,  # Altezza mantenuta
-                           cursor='hand2',
-                           command=lambda num=i: self.keypad_input(str(num)))
-            btn.pack(side='left', padx=3, pady=3)  # Spazio leggermente aumentato
-        
-        # Terza sezione: Caratteri speciali
-        special_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        special_frame.pack(pady=(0, 10))
-        
-        special_label = tk.Label(special_frame,
-                                text="Caratteri speciali:",
-                                font=('Segoe UI', 12, 'bold'),
-                                bg='#F5F5F5',
-                                fg='#333333')
-        special_label.pack()
-        
-        special_buttons_frame = tk.Frame(special_frame, bg='#F5F5F5')
-        special_buttons_frame.pack(pady=5)
-        
-        special_chars = [' ', '.', ',', '-', '_', '(', ')', '@', '!', '?']
-        for char in special_chars:
-            display_char = 'SPAZIO' if char == ' ' else char
-            # Stile speciale per il tasto SPAZIO per renderlo più leggibile
-            if char == ' ':
-                btn = tk.Button(special_buttons_frame,
-                               text=display_char,
-                               font=('Arial', 16, 'bold'),  # Font ingrandito
-                               bg='#4CAF50',  # Verde per maggiore contrasto
-                               fg='#FFFFFF',  # Testo bianco per massima leggibilità
-                               relief='solid',
-                               bd=2,  # Bordo più spesso
-                               width=7,  # Più largo per essere più visibile
-                               height=2,  # Altezza mantenuta
-                               cursor='hand2',
-                               command=lambda c=char: self.keypad_input(c))
-            else:
-                btn = tk.Button(special_buttons_frame,
-                               text=display_char,
-                               font=('Arial', 14, 'bold'),  # Font leggermente ingrandito
-                               bg='#FFF3E0',
-                               fg='#E65100',
-                               relief='solid',
-                               bd=1,
-                               width=4,  # Larghezza aumentata
-                               height=2,  # Altezza mantenuta
-                               cursor='hand2',
-                               command=lambda c=char: self.keypad_input(c))
-            btn.pack(side='left', padx=3, pady=3)  # Spazio leggermente aumentato
-        
-        # Controlli
-        controls_frame = tk.Frame(keypad_container, bg='#F5F5F5')
-        controls_frame.pack(pady=15)
-        
-        # Cancella tutto RIDOTTO
-        clear_btn = tk.Button(controls_frame,
-                             text="🗑️ Cancella Tutto",
-                             font=('Arial', 12, 'bold'),  # Font ridotto
-                             bg='#F44336',
-                             fg='#FFFFFF',
-                             relief='solid',
-                             bd=1,  # Bordo ridotto
-                             padx=15,  # Padding ridotto
-                             pady=8,   # Padding ridotto
-                             cursor='hand2',
-                             command=self.keypad_clear)
-        clear_btn.pack(side='left', padx=10)  # Spazio ridotto
-        
-        # Backspace RIDOTTO
-        back_btn = tk.Button(controls_frame,
-                            text="⌫ Cancella",
-                            font=('Arial', 12, 'bold'),  # Font ridotto
-                            bg='#FF9800',
-                            fg='#FFFFFF',
-                            relief='solid',
-                            bd=1,  # Bordo ridotto
-                            padx=15,  # Padding ridotto
-                            pady=8,   # Padding ridotto
-                            cursor='hand2',
-                            command=self.keypad_backspace)
-        back_btn.pack(side='left', padx=10)  # Spazio ridotto
-        
-        # Maiuscole/Minuscole toggle RIDOTTO
-        caps_btn = tk.Button(controls_frame,
-                            text="🔠 Maiusc",
-                            font=('Arial', 12, 'bold'),  # Font ridotto
-                            bg='#9C27B0',
-                            fg='#FFFFFF',
-                            relief='solid',
-                            bd=1,  # Bordo ridotto
-                            padx=15,  # Padding ridotto
-                            pady=8,   # Padding ridotto
-                            cursor='hand2',
-                            command=self.toggle_caps)
-        caps_btn.pack(side='left', padx=10)  # Spazio ridotto
-        
-        # PULSANTE CONFERMA SUPER LEGGIBILE per NOME
-        confirm_frame_name = tk.Frame(keypad_container, bg='#F5F5F5')
-        confirm_frame_name.pack(pady=(35, 20), padx=15, fill='x')
+                    _show_message('error', 'Errore export', 'Impossibile generare il file TXT. Verifica impostazioni e riprova.')
 
-        # Etichetta esplicativa molto evidente per NOME
-        confirm_label_name = tk.Label(
-            confirm_frame_name,
-            text="TOCCA QUI PER CONFERMARE",
-            font=('Segoe UI', 18, 'bold'),
-            bg='#F5F5F5',
-            fg='#D32F2F'
-        )
-        confirm_label_name.pack(pady=(0, 8))
+            export_btn = tk.Button(btns, text='Esporta ora', font=btn_font, command=on_export_now)
+            export_btn.pack(side='left', padx=(self.s(12), 0), ipadx=self.s(18), ipady=self.s(12))
 
-        # Pulsante CONFERMA con font ridotto per stare nella finestra
-        big_confirm_btn_name = tk.Button(
-            confirm_frame_name,
-            text="CONFERMA",
-            font=('Segoe UI', 24, 'bold'),  # Font ridotto
-            bg='#D32F2F', fg='#FFFFFF',
-            activebackground='#B71C1C', activeforeground='#FFFFFF',
-            relief='raised', bd=8,
-            padx=30, pady=12,  # Padding ridotto
-            cursor='hand2', highlightthickness=0,
-            command=lambda: self.keypad_confirm(window, field_type)
-        )
-        big_confirm_btn_name.pack(pady=8, padx=10)
-        # Rimosso pulsante di conferma duplicato in fondo per evitare tagli e overflow verticale
-        
-        # NOTA: Rimosso il pulsante "Annulla" per evitare confusione
-        # Gli utenti possono chiudere la finestra con la X in alto a destra
-        
-    def toggle_caps(self):
-        """Toggle maiuscole/minuscole - implementazione semplificata"""
-        # Questa funzione può essere espansa per cambiare lo stato delle lettere
-        self.show_notification("💡 Usa le lettere maiuscole direttamente dal tastierino")
-        
-    def create_keypad_action_buttons(self, parent, window, field_type):
-        """Crea pulsanti azione del tastierino - ora più piccoli"""
-        # Footer con pulsanti azione più discreti
-        footer_frame = tk.Frame(parent, bg='#F5F5F5')
-        footer_frame.pack(fill='x', pady=(10, 0))
-        
-        # Solo pulsante Annulla (più piccolo)
-        cancel_btn = tk.Button(footer_frame,
-                              text="❌ Annulla",
-                              font=('Segoe UI', 10),  # Font più piccolo
-                              bg='#757575',
-                              fg='#FFFFFF',
-                              relief='flat',
-                              padx=15,  # Padding ridotto
-                              pady=6,   # Padding ridotto
-                              cursor='hand2',
-                              command=window.destroy)
-        cancel_btn.pack(side='right')  # Solo a destra
-        
-    def keypad_input(self, char):
-        """Gestisce input dal tastierino"""
-        try:
-            self.keypad_display.config(state='normal')
-            current = self.keypad_display.get()
-            self.keypad_display.delete(0, tk.END)
-            self.keypad_display.insert(0, current + char)
-            self.keypad_display.config(state='readonly')
-        except Exception as e:
-            print(f"❌ Errore input tastierino: {e}")
-            
-    def keypad_clear(self):
-        """Cancella tutto il contenuto"""
-        try:
-            self.keypad_display.config(state='normal')
-            self.keypad_display.delete(0, tk.END)
-            self.keypad_display.config(state='readonly')
-        except Exception as e:
-            print(f"❌ Errore clear tastierino: {e}")
-            
-    def keypad_backspace(self):
-        """Cancella ultimo carattere"""
-        try:
-            self.keypad_display.config(state='normal')
-            current = self.keypad_display.get()
-            if current:
-                self.keypad_display.delete(0, tk.END)
-                self.keypad_display.insert(0, current[:-1])
-            self.keypad_display.config(state='readonly')
-        except Exception as e:
-            print(f"❌ Errore backspace tastierino: {e}")
-            
-    def keypad_confirm(self, window, field_type):
-        """Conferma input del tastierino - BADGE (numerico) e NOME (alfanumerico)"""
-        try:
-            value = self.keypad_display.get()
-            
-            # Gestisce badge e nome - NFC usa esclusivamente lettore hardware
-            if field_type not in ['badge', 'name']:
-                print("⚠️ Conferma tastierino disponibile solo per badge e nome")
-                window.destroy()
-                return
-            
-            # Imposta flag per evitare apertura automatica durante inserimento programmato
-            self._programmatic_update = True
-            
-            # Applica valore al campo appropriato
-            if field_type == 'badge':
-                self.badge_entry.delete(0, tk.END)
-                self.badge_entry.insert(0, value)
-                self.badge_entry.configure(bg='#E8F5E8')  # Verde successo
-                feedback_msg = f"✅ Codice badge inserito: {value}"
-            else:  # name
-                self.name_entry.delete(0, tk.END)
-                self.name_entry.insert(0, value)
-                self.name_entry.configure(bg='#E8F5E8')  # Verde successo
-                feedback_msg = f"✅ Nome inserito: {value}"
-                
-            # Chiudi tastierino
-            window.destroy()
-            
-            # Reset flag dopo un breve delay
-            self.root.after(100, lambda: setattr(self, '_programmatic_update', False))
-            
-            # Feedback
-            self.show_notification(feedback_msg)
-            
-        except Exception as e:
-            print(f"❌ Errore conferma tastierino: {e}")
-            # Assicurati di resettare il flag anche in caso di errore
-            self._programmatic_update = False
-            window.destroy()
-        
-    def draw_premium_analog_clock(self):
-        """Disegna orologio analogico premium - dimensioni dinamiche"""
-        canvas = self.premium_clock_canvas
-        canvas.delete("all")
-        
-        # Dimensioni dinamiche basate sulla size del canvas
-        width = int(canvas['width'])
-        height = int(canvas['height'])
-        center_x = width // 2
-        center_y = height // 2
-        radius = min(width, height) // 2 - 20  # Margine di 20px
-        
-        # Cerchio esterno con gradiente simulato
-        for i in range(5):
-            r = radius - i
-            alpha = 255 - (i * 30)
-            color = f"#{alpha//10:01x}{alpha//10:01x}{alpha//10:01x}"
-            canvas.create_oval(center_x - r, center_y - r,
-                             center_x + r, center_y + r,
-                             outline=color, width=1)
-        
-        # Cerchio principale pulito e leggibile
-        canvas.create_oval(center_x - radius, center_y - radius,
-                          center_x + radius, center_y + radius,
-                          outline='#E91E63', width=4, fill='#FAFAFA')
-        
-        # Numeri ore LEGGIBILI - dimensioni equilibrate per chiarezza
-        number_offset = radius * 0.25  # Offset standard per posizionamento corretto
-        font_size = max(16, int(radius // 8))  # Font proporzionato e leggibile
-        for hour in range(1, 13):
-            angle = math.radians((hour * 30) - 90)
-            x = center_x + (radius - number_offset) * math.cos(angle)
-            y = center_y + (radius - number_offset) * math.sin(angle)
-            
-            # Ombra sottile per contrasto
-            canvas.create_text(x+1, y+1, text=str(hour), 
-                             font=('Segoe UI', font_size, 'bold'), 
-                             fill='#CCCCCC')
-            # Numero principale ben leggibile
-            canvas.create_text(x, y, text=str(hour), 
-                             font=('Segoe UI', font_size, 'bold'), 
-                             fill='#333333')
-        
-        # Tacche minuti - proporzionali
-        tick_length = radius * 0.08  # 8% del raggio per lunghezza tacche
-        for minute in range(60):
-            if minute % 5 != 0:  # Solo tacche minori
-                angle = math.radians((minute * 6) - 90)
-                x1 = center_x + (radius - tick_length) * math.cos(angle)
-                y1 = center_y + (radius - tick_length) * math.sin(angle)
-                x2 = center_x + (radius - tick_length/2) * math.cos(angle)
-                y2 = center_y + (radius - tick_length/2) * math.sin(angle)
-                canvas.create_line(x1, y1, x2, y2, fill='#DDDDDD', width=1)
-        
-        # Ora corrente
-        now = datetime.now()
-        hours = now.hour % 12
-        minutes = now.minute
-        seconds = now.second
-        
-        # Lancette EQUILIBRATE per leggibilità ottimale
-        hour_length = radius * 0.5   # 50% del raggio
-        minute_length = radius * 0.7 # 70% del raggio
-        second_length = radius * 0.8 # 80% del raggio
-        
-        # Lancetta ore con spessore appropriato
-        hour_angle = math.radians(((hours + minutes/60) * 30) - 90)
-        hour_x = center_x + hour_length * math.cos(hour_angle)
-        hour_y = center_y + hour_length * math.sin(hour_angle)
-        
-        # Ombra lancetta ore
-        canvas.create_line(center_x+2, center_y+2, hour_x+2, hour_y+2, 
-                          fill='#CCCCCC', width=max(6, radius//20), capstyle='round')
-        canvas.create_line(center_x, center_y, hour_x, hour_y, 
-                          fill='#E91E63', width=max(5, radius//25), capstyle='round')
-        
-        # Lancetta minuti con spessore appropriato
-        minute_angle = math.radians((minutes * 6) - 90)
-        minute_x = center_x + minute_length * math.cos(minute_angle)
-        minute_y = center_y + minute_length * math.sin(minute_angle)
-        
-        # Ombra lancetta minuti
-        canvas.create_line(center_x+2, center_y+2, minute_x+2, minute_y+2, 
-                          fill='#CCCCCC', width=max(4, radius//30), capstyle='round')
-        canvas.create_line(center_x, center_y, minute_x, minute_y, 
-                          fill='#E91E63', width=max(3, radius//35), capstyle='round')
-        
-        # Lancetta secondi equilibrata
-        second_angle = math.radians((seconds * 6) - 90)
-        second_x = center_x + second_length * math.cos(second_angle)
-        second_y = center_y + second_length * math.sin(second_angle)
-        
-        canvas.create_line(center_x, center_y, second_x, second_y, 
-                          fill='#FF5722', width=max(2, radius//50), capstyle='round')
-        
-        # Centro appropriato e ben visibile
-        center_size = max(8, radius//20)  # Centro proporzionato
-        canvas.create_oval(center_x - center_size, center_y - center_size,
-                          center_x + center_size, center_y + center_size,
-                          fill='#FFFFFF', outline='#E91E63', width=3)
-        canvas.create_oval(center_x - center_size//2, center_y - center_size//2,
-                          center_x + center_size//2, center_y + center_size//2,
-                          fill='#E91E63', outline='#E91E63')
-        
-    def start_animations(self):
-        """Avvia animazioni e aggiornamenti"""
-        self.update_clock_premium()
-        self.animate_pulse()
-        self.update_uptime()
-        
-    def update_clock_premium(self):
-        """Aggiorna orologio premium"""
-        now = datetime.now()
-        
-        # Disegna orologio analogico
-        if hasattr(self, 'premium_clock_canvas'):
-            self.draw_premium_analog_clock()
-        
-        # Aggiorna ora digitale
-        time_str = now.strftime("%H:%M:%S")
-        if hasattr(self, 'premium_time'):
-            self.premium_time.config(text=time_str)
-        
-        # Aggiorna data
-        date_str = now.strftime("%A, %d %B %Y")
-        date_str = self.translate_date(date_str)
-        if hasattr(self, 'premium_date'):
-            self.premium_date.config(text=date_str.title())
-        
-        # Prossimo aggiornamento
-        self.root.after(1000, self.update_clock_premium)
-        
-    def animate_pulse(self):
-        """Animazione pulse per indicatori live"""
-        self.pulse_state = (self.pulse_state + 1) % 20
-        
-        # Pulse NFC badge icon - ANIMAZIONE DISABILITATA
-        # L'icona badge rimane statica come richiesto dall'utente
-        
-        # Prossima animazione
-        self.root.after(100, self.animate_pulse)
-        
-    def update_uptime(self):
-        """Aggiorna uptime sistema"""
-        if not hasattr(self, 'start_time'):
-            self.start_time = datetime.now()
-        
-        uptime = datetime.now() - self.start_time
-        hours = uptime.seconds // 3600
-        minutes = (uptime.seconds % 3600) // 60
-        seconds = uptime.seconds % 60
-        
-        uptime_str = f"Uptime: {hours:02d}:{minutes:02d}:{seconds:02d}"
-        if hasattr(self, 'uptime_label'):
-            self.uptime_label.config(text=uptime_str)
-        
-        # Prossimo aggiornamento uptime
-        self.root.after(1000, self.update_uptime)
-        
-    def translate_date(self, date_str):
-        """Traduzione italiana"""
-        translations = {
-            'Monday': 'Lunedì', 'Tuesday': 'Martedì', 'Wednesday': 'Mercoledì',
-            'Thursday': 'Giovedì', 'Friday': 'Venerdì', 'Saturday': 'Sabato', 'Sunday': 'Domenica',
-            'January': 'Gennaio', 'February': 'Febbraio', 'March': 'Marzo', 'April': 'Aprile',
-            'May': 'Maggio', 'June': 'Giugno', 'July': 'Luglio', 'August': 'Agosto',
-            'September': 'Settembre', 'October': 'Ottobre', 'November': 'Novembre', 'December': 'Dicembre'
-        }
-        
-        for eng, ita in translations.items():
-            date_str = date_str.replace(eng, ita)
-        return date_str
-        
-    def on_badge_read(self, badge_id):
-        """Gestisce lettura badge premium con tipo timbratura selezionato + modalità apprendimento"""
-        try:
-            # MODALITÀ APPRENDIMENTO BADGE
-            if hasattr(self, 'badge_learn_mode') and self.badge_learn_mode:
-                if hasattr(self, 'badge_entry'):
-                    self.badge_entry.delete(0, tk.END)
-                    self.badge_entry.insert(0, str(badge_id))
-                    self.badge_entry.configure(bg='#E8F5E8')  # Verde successo
-                    self.badge_learn_mode = False
-                    self.show_notification(f"✅ Badge acquisito: {badge_id}")
-                return
-            
-            # MODALITÀ APPRENDIMENTO NFC - Solo da lettore hardware
-            if hasattr(self, 'nfc_learn_mode') and self.nfc_learn_mode:
-                if hasattr(self, 'nfc_entry'):
-                    self.nfc_entry.config(state='normal')
-                    self.nfc_entry.delete(0, tk.END)
-                    self.nfc_entry.insert(0, str(badge_id))
-                    self.nfc_entry.configure(bg='#E8F5E8')  # Verde successo
-                    self.nfc_entry.config(state='readonly')
-                    self.nfc_learn_mode = False
-                    self.show_notification(f"✅ Valore NFC acquisito da lettore: {badge_id}")
-                return
-            
-            # MODALITÀ NORMALE - Timbratura
-            # Riproduce suono di conferma
-            self.play_badge_sound()
-            
-            # Ottieni tipo timbratura selezionato
-            tipo_selezionato = getattr(self, 'timbratura_type', tk.StringVar(value="inizio_giornata")).get()
-            
-            # Mappa tipi per database (compatibilità)
-            tipo_db_map = {
-                'inizio_giornata': 'entrata',
-                'fine_giornata': 'uscita', 
-                'inizio_pausa': 'pausa_inizio',
-                'fine_pausa': 'pausa_fine'
-            }
-            
-            tipo_movimento = tipo_db_map.get(tipo_selezionato, 'entrata')
-            
-            # Messaggio e colore per tipo
-            tipo_config = {
-                'inizio_giornata': {'msg': 'Buona giornata!', 'color': '#4CAF50'},
-                'fine_giornata': {'msg': 'Arrivederci!', 'color': '#F44336'},
-                'inizio_pausa': {'msg': 'Buona pausa!', 'color': '#FF9800'},
-                'fine_pausa': {'msg': 'Bentornato!', 'color': '#2196F3'}
-            }
-            
-            config = tipo_config.get(tipo_selezionato, {'msg': 'Timbratura registrata', 'color': '#4CAF50'})
-            
-            # Salva timbratura nel database SQLite
-            success = self.database_manager.save_timbratura(
-                badge_id=badge_id,
-                tipo=tipo_movimento,
-                nome="",  # Da integrare con anagrafica
-                cognome=""
-            )
-            
-            if success:
-                # Feedback premium di successo
-                self.show_premium_feedback({
-                    'badge_id': badge_id,
-                    'tipo_movimento': tipo_selezionato,
-                    'messaggio': config['msg'],
-                    'colore': config['color'],
-                    'timestamp': datetime.now()
-                })
-                
-                # Aggiorna contatori dashboard
-                self.update_premium_counters()
-                
-                # Notifica nella status bar
-                self.show_notification(f"✅ Badge {badge_id} - {tipo_movimento.upper()}")
-            else:
-                # Errore nel salvataggio
-                self.show_premium_error("Errore salvataggio timbratura")
-            
-        except Exception as e:
-            print(f"❌ Errore gestione badge: {e}")
-            print(f"❌ Badge ID ricevuto: '{badge_id}'")
-            print(f"❌ Tipo errore: {type(e).__name__}")
-            self.show_premium_error("Errore sistema")
-            
-    def show_premium_feedback(self, timbratura):
-        """Feedback premium con animazioni per tutti i tipi"""
-        movimento = timbratura['tipo_movimento']
-        badge_id = timbratura['badge_id']
-        messaggio = timbratura.get('messaggio', 'Timbratura registrata')
-        colore = timbratura.get('colore', '#4CAF50')
-        timestamp = timbratura.get('timestamp', datetime.now())
-        ora = timestamp.strftime('%d/%m/%Y %H:%M:%S')
 
-        # Configurazione per tipi movimento con nuove icone
-        movimento_config = {
-            'entrata': {'text': '▶️ Entrata Registrata', 'color': '#2E7D32'},
-            'uscita': {'text': '◀️ Uscita Registrata', 'color': '#D32F2F'},
-            'inizio_giornata': {'text': '▶️ Inizio Giornata', 'color': '#2E7D32'},
-            'fine_giornata': {'text': '◀️ Fine Giornata', 'color': '#D32F2F'},
-            'inizio_pausa': {'text': '⏸️ Inizio Pausa', 'color': '#FF9800'},
-            'fine_pausa': {'text': '▶️ Fine Pausa', 'color': '#2196F3'}
-        }
+            # Tastiera touch: usa logica del wizard + verifica visibilità con fallback snello
+            def _is_keyboard_visible():
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    classes = ['IPTip_Main_Window', 'OSKMainClass']
+                    user32 = ctypes.windll.user32
+                    rect = wintypes.RECT()
+                    for cls in classes:
+                        hwnd = user32.FindWindowW(cls, None)
+                        if hwnd and user32.IsWindowVisible(hwnd):
+                            if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                                # visibile solo se occupa parte bassa schermo
+                                h = win.winfo_screenheight() if hasattr(win, 'winfo_screenheight') else 800
+                                return rect.top > int(h * 0.45)
+                    return False
+                except Exception:
+                    return False
 
-        config = movimento_config.get(movimento, {'text': f'✅ {movimento.title()}', 'color': colore})
+            _kb_sequence_running = False
 
-        # Aggiorna NFC status
-        self.nfc_status_premium.config(text=config['text'], fg=config['color'])
+            def _ensure_touch_keyboard(initial=False):
+                try:
+                    import subprocess, os
+                    nonlocal _kb_sequence_running
+                    if _kb_sequence_running:
+                        return True
+                    _kb_sequence_running = True
+                    # 1) Registro (come wizard)
+                    try:
+                        import winreg
+                        if winreg is not None:
+                            key_path = r"Software\\Microsoft\\TabletTip\\1.7"
+                            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as k:
+                                for name, val in (
+                                    ("EnableTouchKeyboardAutoInvoke", 1),
+                                    ("EnableDesktopModeAutoInvoke", 1),
+                                    ("EnableHardwareKeyboard", 1),
+                                ):
+                                    try:
+                                        winreg.SetValueEx(k, name, 0, winreg.REG_DWORD, int(val))
+                                    except Exception:
+                                        pass
+                    except Exception:
+                        pass
+                    # 2) ctfmon (come wizard)
+                    try:
+                        ctf_paths = [
+                            os.path.join(os.environ.get('SystemRoot', r'C:\\Windows'), 'System32', 'ctfmon.exe'),
+                            os.path.join(os.environ.get('SystemRoot', r'C:\\Windows'), 'SysWOW64', 'ctfmon.exe'),
+                        ]
+                        for cp in ctf_paths:
+                            if os.path.exists(cp):
+                                try:
+                                    subprocess.Popen([cp], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x00000008)
+                                    break
+                                except Exception:
+                                    continue
+                    except Exception:
+                        pass
+                    # Helpers per stadi
+                    def _stage_ms_inputapp():
+                        try:
+                            subprocess.Popen(['cmd', '/c', 'start', '', 'ms-inputapp:'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x08000000)
+                            return True
+                        except Exception:
+                            try:
+                                subprocess.Popen(['explorer.exe', 'ms-inputapp:'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                return True
+                            except Exception:
+                                return False
+                    def _stage_tabtip():
+                        try:
+                            paths = [
+                                os.path.join(os.environ.get('ProgramFiles', r'C:\\Program Files'), 'Common Files', 'microsoft shared', 'ink', 'TabTip.exe'),
+                                os.path.join(os.environ.get('ProgramFiles(x86)', r'C:\\Program Files (x86)'), 'Common Files', 'microsoft shared', 'ink', 'TabTip.exe'),
+                            ]
+                            for p in paths:
+                                if os.path.exists(p):
+                                    try:
+                                        os.startfile(p)
+                                        return True
+                                    except Exception:
+                                        try:
+                                            subprocess.Popen([p], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x00000008)
+                                            return True
+                                        except Exception:
+                                            continue
+                            return False
+                        except Exception:
+                            return False
+                    def _stage_osk():
+                        try:
+                            subprocess.Popen(['osk.exe'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x00000008)
+                            return True
+                        except Exception:
+                            return False
+                    def _finish_sequence():
+                        nonlocal _kb_sequence_running
+                        _kb_sequence_running = False
 
-        # Aggiorna ultima lettura
-        self.last_read_label.config(text=f"Ultima lettura: {ora.split()[1]}")
+                    # Avvia ms-inputapp subito
+                    _stage_ms_inputapp()
+                    # Dopo 150ms se non visibile, prova TabTip
+                    try:
+                        win.after(150, lambda: (not _is_keyboard_visible()) and _stage_tabtip())
+                    except Exception:
+                        pass
+                    # Dopo 800ms se non visibile, prova OSK
+                    try:
+                        win.after(800, lambda: (not _is_keyboard_visible()) and _stage_osk())
+                    except Exception:
+                        pass
+                    # Sblocca la sequenza dopo 1200ms
+                    try:
+                        win.after(1200, _finish_sequence)
+                    except Exception:
+                        _finish_sequence()
+                    return True
+                except Exception:
+                    _kb_sequence_running = False
+                    return False
 
-        # Ripristina dopo 4 secondi
-        self.root.after(4000, lambda: self.nfc_status_premium.config(
-            text="🟢 Lettore Attivo", fg='#4CAF50'))
-        
-    def show_premium_error(self, message="Errore Lettura"):
-        """Errore premium con messaggio personalizzato"""
-        self.nfc_status_premium.config(text=f"❌ {message}", fg='#F44336')
-        self.show_notification(f"Errore: {message}")
-        
-        self.root.after(3000, lambda: self.nfc_status_premium.config(
-            text="🟢 Lettore Attivo", fg='#4CAF50'))
-        
-    def update_premium_counters(self):
-        """Aggiorna contatori premium con dati SQLite reali"""
-        try:
-            # Ottieni statistiche reali dal database SQLite
-            stats = self.database_manager.get_database_stats()
-            timbrature_oggi = stats.get('timbrature_today', 0)
-            total_timbrature = stats.get('total_timbrature', 0)
-            unique_badges = stats.get('unique_badges', 0)
-            
-            # Ottieni timbrature di oggi per calcolare entrate/uscite
-            timbrature_today = self.database_manager.get_timbrature_today()
-            
-            entrate = sum(1 for t in timbrature_today if t.get('tipo') == 'entrata')
-            uscite = sum(1 for t in timbrature_today if t.get('tipo') == 'uscita')
-            
-            # Aggiorna labels se esistono
-            if hasattr(self, 'entrate_label_premium'):
-                self.entrate_label_premium.config(text=f"Entrate: {entrate}")
-            if hasattr(self, 'uscite_label_premium'):
-                self.uscite_label_premium.config(text=f"Uscite: {uscite}")
-            if hasattr(self, 'badge_unique_label'):
-                self.badge_unique_label.config(text=f"Badge unici: {unique_badges}")
-                
-        except Exception as e:
-            print(f"Errore aggiornamento contatori: {e}")
-            # Fallback a contatori statici in caso di errore
-            count = getattr(self, '_daily_count', 0) + 1
-            self._daily_count = count
-        
-    def show_notification(self, message):
-        """Mostra notifica nella status bar"""
-        if hasattr(self, 'notification_label'):
-            self.notification_label.config(text=f"🔔 {message}")
-            # Rimuovi dopo 5 secondi
-            self.root.after(5000, lambda: self.notification_label.config(text=""))
-        else:
-            # Se la label non esiste ancora, stampa il messaggio
-            print(f"📢 {message}")
-        
-    def refresh_dashboard(self, event=None):
-        """Refresh dashboard"""
-        self.show_notification("Dashboard aggiornata")
-        
-    def simulate_nfc_badge(self, event=None):
-        """SIMULAZIONE DISABILITATA - MODALITÀ PRODUZIONE"""
-        print("⚠️ SIMULAZIONE DISABILITATA - Sistema in modalità produzione")
-        self.show_notification("⚠️ SOLO LETTORE NFC HARDWARE - Avvicina badge reale")
-    
-    def show_admin(self, event=None):
-        """Panel admin premium"""
-        self.show_notification("Accesso amministratore richiesto")
-    
-    def on_keyboard_input(self, event):
-        """
-        Gestisce input da lettore USB ID Card (modalità tastiera)
-        Il lettore digita l'ID badge seguito da ENTER
-        """
-        try:
-            char = event.char
-            
-            # Ignora tasti speciali e funzione
-            if not char or ord(char) < 32:
-                # ENTER premuto - processa il badge
-                if event.keysym == 'Return' and self.badge_input_buffer:
-                    badge_id = self.badge_input_buffer.strip()
-                    if len(badge_id) >= 4:  # ID badge valido
-                        print(f"🔌 Badge USB ricevuto: {badge_id}")
-                        # Processa il badge come lettura NFC
-                        self.on_badge_read(badge_id)
-                    
-                    # Reset buffer
-                    self.badge_input_buffer = ""
-                return
-            
-            # Accumula caratteri dell'ID badge
-            self.badge_input_buffer += char
-            
-            # Limite sicurezza
-            if len(self.badge_input_buffer) > 50:
-                self.badge_input_buffer = self.badge_input_buffer[-50:]
-                
-            # Auto-processo se il lettore non invia ENTER (alcuni modelli)
-            # Attesa 100ms per caratteri aggiuntivi
-            self.root.after(100, self._check_badge_complete)
-            
-        except Exception as e:
-            print(f"❌ Errore input tastiera: {e}")
-    
-    def _check_badge_complete(self):
-        """Controlla se l'input del badge è completo (senza ENTER esplicito)"""
-        try:
-            # Se il buffer contiene un ID valido e non ci sono nuovi input
-            if (len(self.badge_input_buffer) >= 8 and 
-                len(self.badge_input_buffer) <= 20):
-                
-                badge_id = self.badge_input_buffer.strip()
-                print(f"🔌 Badge USB completato: {badge_id}")
-                self.on_badge_read(badge_id)
-                self.badge_input_buffer = ""
-                
-        except Exception as e:
-            print(f"❌ Errore controllo badge: {e}")
-    
-    def play_badge_sound(self):
-        """Riproduce un suono di conferma per il badge rilevato"""
-        self.play_sound('success')
-        
-        # Approccio multiplo con focus su compatibilità EXE + feedback visivo
-        sound_played = False
-        
-        # Metodo 1: winsound.Beep - il più diretto e compatibile
-        try:
-            winsound.Beep(1000, 300)  # 1000Hz per 300ms
-            print("✅ winsound.Beep riprodotto")
-            sound_played = True
-        except Exception as e:
-            print(f"❌ winsound.Beep fallito: {e}")
-        
-        # Metodo 2: Multipli beep per enfasi
-        if not sound_played:
+            def _show_touch_keyboard(event=None):
+                try:
+                    if event is not None and getattr(event, 'widget', None) is not None:
+                        try:
+                            event.widget.focus_set()
+                        except Exception:
+                            pass
+                    # Piccolo delay per lasciare stabilizzare il focus
+                    win.after(30, _ensure_touch_keyboard)
+                except Exception:
+                    _ensure_touch_keyboard()
+
+            # Binding: solo click e rilascio click per evitare apertura automatica
+            for entry in (sede_entry, negozio_entry, ora_entry, dir_entry):
+                try:
+                    entry.bind('<Button-1>', _show_touch_keyboard)
+                    entry.bind('<ButtonRelease-1>', _show_touch_keyboard)
+                except Exception:
+                    pass
+
+            # Esc per chiudere
             try:
-                for i in range(3):
-                    winsound.Beep(800 + i*200, 100)
-                print("✅ Beep multipli riprodotti")
-                sound_played = True
-            except Exception as e:
-                print(f"❌ Beep multipli falliti: {e}")
-        
-        # Metodo 3: MessageBeep di sistema
-        if not sound_played:
-            try:
-                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                print("✅ MessageBeep riprodotto")
-                sound_played = True
-            except Exception as e:
-                print(f"❌ MessageBeep fallito: {e}")
-        
-        # Metodo 4: PowerShell beep (molto compatibile con EXE)
-        if not sound_played:
-            try:
-                import subprocess
-                subprocess.run(["powershell", "-c", "[console]::beep(1000,300)"], 
-                             capture_output=True, timeout=2)
-                print("✅ PowerShell beep riprodotto")
-                sound_played = True
-            except Exception as e:
-                print(f"❌ PowerShell beep fallito: {e}")
-        
-        # NUOVO: Metodo 5 - Notifica Windows (sempre visibile)
-        if not sound_played:
-            try:
-                import subprocess
-                subprocess.run([
-                    "powershell", "-c", 
-                    "Add-Type -AssemblyName System.Windows.Forms; " +
-                    "[System.Windows.Forms.MessageBox]::Show('✅ TIMBRATURA REGISTRATA!', 'TIGOTÀ', 'OK', 'Information')"
-                ], capture_output=True, timeout=3)
-                print("✅ Notifica Windows mostrata")
-                sound_played = True
-            except Exception as e:
-                print(f"❌ Notifica Windows fallita: {e}")
-        
-        # NUOVO: Metodo 6 - Flash della finestra per attirare attenzione
-        try:
-            # Flash della finestra principale
-            self.root.attributes('-topmost', True)
-            self.root.after(100, lambda: self.root.attributes('-topmost', False))
-            
-            # Cambio colore temporaneo dello sfondo
-            original_bg = self.root.cget('bg')
-            self.root.configure(bg='#00FF00')  # Verde brillante
-            self.root.after(200, lambda: self.root.configure(bg=original_bg))
-            
-            print("✅ Feedback visivo attivato")
-        except Exception as e:
-            print(f"❌ Feedback visivo fallito: {e}")
-        
-        # Metodo 7: ASCII bell come ultimo tentativo
-        if not sound_played:
-            try:
-                print("\a\a\a")  # Triple ASCII bell
-                print("✅ ASCII bell triplo riprodotto")
-                sound_played = True
-            except:
+                win.bind('<Escape>', lambda e: _on_close_settings())
+            except Exception:
                 pass
-        
-        if sound_played:
-            print("✅ Suono riprodotto con successo")
-        else:
-            print("⚠️ Audio non disponibile - usando solo feedback visivo")
-            
-        # SEMPRE attivo: Feedback visivo aggiuntivo nella UI
-        self.show_audio_feedback_visual()
-    
-    def show_audio_feedback_visual(self):
-        """Mostra feedback visivo prominente quando l'audio non funziona"""
-        try:
-            # Crea un overlay temporaneo verde brillante
-            overlay = tk.Toplevel(self.root)
-            overlay.title("TIMBRATURA CONFERMATA")
-            overlay.configure(bg='#00FF00')
-            
-            # Calcola dimensioni e posizione per centrare il popup
-            popup_width = 600
-            popup_height = 400
-            
-            # Forza l'aggiornamento della geometria della finestra principale
-            self.root.update_idletasks()
-            
-            # Ottieni dimensioni dello schermo
-            screen_width = self.root.winfo_screenwidth()
-            screen_height = self.root.winfo_screenheight()
-            
-            # Calcola posizione centrale precisa
-            x = (screen_width - popup_width) // 2
-            y = (screen_height - popup_height) // 2
-            
-            # Assicurati che la finestra non vada fuori schermo
-            if x < 0:
-                x = 0
-            if y < 0:
-                y = 0
-            
-            overlay.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
-            overlay.attributes('-topmost', True)
-            overlay.resizable(False, False)
-            
-            # Centra il popup rispetto alla finestra principale se disponibile
+
+            # Focus iniziale
             try:
-                # Ottieni posizione e dimensione della finestra principale
-                main_x = self.root.winfo_x()
-                main_y = self.root.winfo_y()
-                main_width = self.root.winfo_width()
-                main_height = self.root.winfo_height()
-                
-                # Calcola centro della finestra principale
-                center_x = main_x + (main_width // 2) - (popup_width // 2)
-                center_y = main_y + (main_height // 2) - (popup_height // 2)
-                
-                # Usa il centro della finestra principale se disponibile
-                if center_x > 0 and center_y > 0:
-                    overlay.geometry(f"{popup_width}x{popup_height}+{center_x}+{center_y}")
-            except:
-                # Fallback al centro dello schermo
+                if not cur_sede:
+                    sede_entry.focus_set()
+                else:
+                    negozio_entry.focus_set()
+            except Exception:
                 pass
-            
-            # Container principale con padding
-            main_frame = tk.Frame(overlay, bg='#00FF00', padx=40, pady=40)
-            main_frame.pack(expand=True, fill='both')
-            
-            # Messaggio di conferma molto grande
-            confirm_label = tk.Label(
-                main_frame,
-                text="✅ TIMBRATURA\nREGISTRATA!",
-                font=('Arial', 36, 'bold'),
-                bg='#00FF00',
-                fg='#000000',
-                justify='center'
-            )
-            confirm_label.pack(expand=True)
-            
-            # Messaggio informativo
-            info_label = tk.Label(
-                main_frame,
-                text="Operazione completata con successo",
-                font=('Arial', 16),
-                bg='#00FF00',
-                fg='#333333'
-            )
-            info_label.pack(pady=(10, 0))
-            
-            # Chiudi automaticamente dopo 2 secondi (un po' più tempo per leggere)
-            overlay.after(2000, overlay.destroy)
-            
-            # Flash dell'interfaccia principale
-            original_colors = {}
-            for widget_name in ['status_label', 'time_label', 'date_label']:
-                if hasattr(self, widget_name):
-                    widget = getattr(self, widget_name)
-                    original_colors[widget_name] = widget.cget('bg')
-                    widget.configure(bg='#FFFF00')  # Giallo brillante
-            
-            # Ripristina colori dopo 500ms
-            def restore_colors():
-                for widget_name, original_bg in original_colors.items():
-                    if hasattr(self, widget_name):
-                        widget = getattr(self, widget_name)
-                        widget.configure(bg=original_bg)
-            
-            self.root.after(500, restore_colors)
-            
-            print("✅ Feedback visivo prominente attivato")
-            
+
+            win.focus_force()
         except Exception as e:
-            print(f"❌ Errore feedback visivo: {e}")
-    
-    def play_sound(self, sound_type='default', volume_level=0.7):
+            print(f"[UI] Errore apertura impostazioni: {e}")
+
+    # --- Trasferimento TXT giornaliero ---
+    def _read_transfer_settings(self):
+        """Legge ora e cartella di trasferimento + codici sede/negozio da config_negozio.ini."""
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+        except Exception:
+            base_dir = '.'
+        cfg_path = os.path.join(base_dir, 'config_negozio.ini')
+        cfg = configparser.ConfigParser()
+        try:
+            cfg.read(cfg_path, encoding='utf-8')
+        except Exception:
+            cfg.read(cfg_path)
+        # Default
+        ora = '02:00'
+        export_dir = os.path.join(base_dir, 'export')
+        sede = ''
+        negozio = ''
+        if cfg.has_section('TRASFERIMENTO'):
+            try:
+                ora = (cfg.get('TRASFERIMENTO', 'ora', fallback=ora) or ora).strip()
+            except Exception:
+                pass
+            try:
+                export_dir = (cfg.get('TRASFERIMENTO', 'cartella', fallback=export_dir) or export_dir).strip()
+            except Exception:
+                pass
+        if cfg.has_section('AZIENDA'):
+            try:
+                sede = (cfg.get('AZIENDA', 'codice_sede', fallback='') or '').strip()
+            except Exception:
+                pass
+            try:
+                negozio = (cfg.get('AZIENDA', 'codice_negozio', fallback='') or '').strip()
+            except Exception:
+                pass
+        return ora, export_dir, sede, negozio
+
+    def export_pending_timbrature_to_txt(self) -> bool:
+        """Esporta timbrature con sync_status='pending' in un TXT e le marca come sincronizzate.
+        Formato righe (senza header): CODSEDE;CODNEGOZIO;BADGE;TIPO;YYYYMMDD;HHMMSS
         """
-        Sistema audio enterprise - Suoni distintivi per diverse azioni
-        
-        Tipi disponibili:
-        - 'selection': Suono selezione pulsante (soft click)
-        - 'success': Suono successo timbratura (ascendente)  
-        - 'error': Suono errore (discendente, grave)
-        - 'warning': Suono avviso doppia timbratura (medio)
-        - 'hover': Suono hover pulsante (molto soft)
-        - 'confirm': Suono conferma azione (doppio beep)
-        - 'default': Suono generico
-        """
-        
-        # Configurazione suoni enterprise
-        sound_config = {
-            'selection': {'freq': 800, 'duration': 50, 'pattern': 'single'},
-            'success': {'freq': 1200, 'duration': 200, 'pattern': 'ascending'}, 
-            'error': {'freq': 400, 'duration': 300, 'pattern': 'descending'},
-            'warning': {'freq': 800, 'duration': 150, 'pattern': 'double'},
-            'hover': {'freq': 600, 'duration': 30, 'pattern': 'single'},
-            'confirm': {'freq': 1000, 'duration': 100, 'pattern': 'confirm'},
-            'default': {'freq': 1000, 'duration': 200, 'pattern': 'single'}
-        }
-        
-        config = sound_config.get(sound_type, sound_config['default'])
-        sound_played = False
+        path_tmp = None
+        try:
+            from database_sqlite import get_database_manager
+        except Exception as e:
+            print(f"[TRANSFER] DB non disponibile: {e}")
+            return False
+        try:
+            ora_str, out_dir, cod_sede, cod_negozio = self._read_transfer_settings()
+            # Crea cartella se manca
+            os.makedirs(out_dir, exist_ok=True)
+        except Exception as e:
+            print(f"[TRANSFER] Config/cartella trasferimento non valida: {e}")
+            return False
 
         try:
-            # Implementazione pattern sonori distintivi
-            if config['pattern'] == 'single':
-                winsound.Beep(config['freq'], config['duration'])
-                
-            elif config['pattern'] == 'ascending':
-                # Suono successo - 3 beep ascendenti
-                for i in range(3):
-                    freq = config['freq'] + (i * 200)
-                    winsound.Beep(freq, config['duration'] // 3)
-                    
-            elif config['pattern'] == 'descending':
-                # Suono errore - 3 beep discendenti
-                for i in range(3):
-                    freq = config['freq'] - (i * 100)
-                    winsound.Beep(max(200, freq), config['duration'] // 3)
-                    
-            elif config['pattern'] == 'double':
-                # Suono warning - doppio beep
-                winsound.Beep(config['freq'], config['duration'])
-                time.sleep(0.05)
-                winsound.Beep(config['freq'] + 200, config['duration'])
-                
-            elif config['pattern'] == 'confirm':
-                # Suono conferma - beep + pausa + beep più alto
-                winsound.Beep(config['freq'], config['duration'])
-                time.sleep(0.1)
-                winsound.Beep(config['freq'] + 300, config['duration'])
-                
-            print(f"✅ Suono {sound_type} riprodotto")
-            sound_played = True
-            
+            db = get_database_manager()
+            rows = db.get_timbrature_pending()
+            if not rows:
+                print("[TRANSFER] Nessuna timbratura pending da esportare")
+                return True  # Non è errore
+
+            # Prepara nome file: ORE{CODICE_NEGOZIO}{YYYYMMDDHHMMSS}.TXT
+            now = datetime.now()
+            ts = now.strftime('%Y%m%d%H%M%S')
+            codice_negozio = (cod_negozio or '').strip()
+            filename = f"ORE{codice_negozio}{ts}.TXT"
+            path_tmp = os.path.join(out_dir, filename + ".part")
+            path_final = os.path.join(out_dir, filename)
+
+            def _fmt_dt(ts_val):
+                s = str(ts_val)
+                # atteso 'YYYY-MM-DD HH:MM:SS[.fff]' -> split
+                try:
+                    date_part, time_part = s.split(' ')
+                except ValueError:
+                    # fallback: tutto in data
+                    date_part = s[:10]
+                    time_part = s[11:19]
+                ymd = date_part.replace('-', '')
+                hms = time_part.split('.')[0].replace(':', '')
+                return ymd, hms
+
+            # Scrivi file atomico
+            with open(path_tmp, 'w', encoding='utf-8', newline='') as f:
+                for r in rows:
+                    # Codice da esportare: codice dipendente associato al badge (wizard), numerico a 10 cifre (pad con zeri)
+                    raw_badge = (r.get('badge_id') or '').strip()
+                    emp_code_digits = ''
+                    try:
+                        dip = db.get_dipendente_by_badge(raw_badge)
+                        if dip and 'codice' in dip and dip['codice'] is not None:
+                            emp_code_digits = ''.join(ch for ch in str(dip['codice']) if ch.isdigit())
+                    except Exception:
+                        emp_code_digits = ''
+                    if not emp_code_digits:
+                        # Fallback: usa solo le cifre del badge_id
+                        emp_code_digits = ''.join(ch for ch in raw_badge if ch.isdigit()) or '0'
+                    badge10 = emp_code_digits[-10:].rjust(10, '0')
+                    # Tipo: 1=entrata, 0=uscita
+                    tipo_txt = (r.get('tipo') or '').strip().lower()
+                    tipo_flag = '1' if tipo_txt == 'entrata' else '0'
+                    # Data/ora: GGMMAA e HHMM
+                    ymd, hms = _fmt_dt(r.get('timestamp'))  # ymd=YYYYMMDD, hms=HHMMSS
+                    ddmmyy = ymd[6:8] + ymd[4:6] + ymd[2:4]
+                    hhmm = hms[0:2] + hms[2:4]
+                    # SEDE + BADGE(10) + TIPO + 0000 + GGMMAA + HHMM (senza separatori)
+                    sede_code = (cod_sede or '').strip()
+                    record = f"{sede_code}{badge10}{tipo_flag}0000{ddmmyy}{hhmm}\r\n"
+                    f.write(record)
+            os.replace(path_tmp, path_final)
+
+            # Marca come sincronizzate
+            ids = [r.get('id') for r in rows if r.get('id') is not None]
+            if ids:
+                db.mark_timbrature_synced(ids)
+            print(f"[TRANSFER] Esportate {len(rows)} timbrature in {path_final}")
+            return True
         except Exception as e:
-            print(f"❌ Errore audio {sound_type}: {e}")
-
-        # Fallback per errori audio
-        if not sound_played:
             try:
-                # Beep di fallback più semplice
-                winsound.Beep(1000, 200)
-                print("✅ Suono fallback riprodotto")
-                sound_played = True
-            except Exception as e:
-                print(f"❌ Anche fallback audio fallito: {e}")
+                if path_tmp and os.path.exists(path_tmp):
+                    os.remove(path_tmp)
+            except Exception:
+                pass
+            print(f"[TRANSFER] Errore export TXT: {e}")
+            return False
 
-        # Feedback visivo quando audio non disponibile
-        if not sound_played and sound_type in ['error', 'warning']:
-            try:
-                # Flash visivo rosso per errori
-                original_bg = self.root.cget('bg')
-                flash_color = '#FFCDD2' if sound_type == 'error' else '#FFF3E0'
-                self.root.configure(bg=flash_color)
-                self.root.update()
-                time.sleep(0.15)
-                self.root.configure(bg=original_bg)
-                print(f"✅ Feedback visivo {sound_type} attivato")
-            except Exception as e:
-                print(f"❌ Feedback visivo {sound_type} fallito: {e}")
-    def _try_pygame_audio(self):
-        """Metodo deprecato - ora usiamo approccio più semplice"""
-        return False
-        
-    def toggle_fullscreen(self, event=None):
-        """Toggle fullscreen"""
-        current = self.root.attributes('-fullscreen')
-        self.root.attributes('-fullscreen', not current)
-        
-    def cleanup(self):
-        """Cleanup con chiusura database SQLite"""
-        print("🔄 Chiusura sistema TIGOTÀ...")
-        
-        # Chiudi lettore NFC
-        if hasattr(self, 'nfc_reader'):
-            self.nfc_reader.stop_reading()
-            print("✅ Lettore NFC chiuso")
-        
-        # Chiudi database SQLite in modo pulito
-        if hasattr(self, 'database_manager'):
-            try:
-                # Backup finale prima della chiusura
-                self.database_manager.create_daily_backup()
-                close_database()
-                print("✅ Database SQLite chiuso correttamente")
-            except Exception as e:
-                print(f"⚠️ Errore chiusura database: {e}")
-        
-        print("🎯 Sistema TIGOTÀ chiuso completamente")
-    
-    def create_timbratura_selectors(self, parent):
-        """Crea selettori per tipo timbratura con icone chiare e funzionamento evidente"""
-        # Titolo esplicativo
-        title_frame = tk.Frame(parent, bg='#FFFFFF')
-        title_frame.pack(fill='x', pady=(0, 15))
-        
-        title_label = tk.Label(title_frame,
-                              text="SELEZIONA TIPO DI TIMBRATURA",
-                              font=('Arial', 16, 'bold'),
-                              bg='#FFFFFF',
-                              fg='#333333')
-        title_label.pack()
-        
-        # Container selettori
-        selectors_frame = tk.Frame(parent, bg='#FFFFFF')
-        selectors_frame.pack(fill='x', pady=(20, 15))
-        
-        # Etichetta semplificata
-        instruction_label = tk.Label(parent,
-                                   text="Scegli e avvicina il badge",
-                                   font=('Segoe UI', 18, 'normal'),
-                                   bg='#FFFFFF',
-                                   fg='#424242')
-        instruction_label.pack(pady=(0, 20))
-        
-        # Etichetta per mostrare la selezione corrente
-        self.selection_label = tk.Label(parent, 
-                                       text="SELEZIONE: ENTRATA", 
-                                       font=('Segoe UI', 20, 'bold'),
-                                       fg='#1976D2',
-                                       bg='#FFFFFF',
-                                       pady=15)
-        self.selection_label.pack(pady=(0, 15))
-        
-        # Variabile per tracciare selezione
-        self.timbratura_type = tk.StringVar(value="entrata")
-        
-        # Configurazione selettori - Design enterprise minimalista
-        selectors_config = [
-            {
-                'value': 'entrata',
-                'text': 'ENTRATA',
-                'arrow': '→',  # Freccia a destra
-                'color': '#1976D2',  # Blu primario
-                'selected_color': '#0D47A1'  # Blu scuro per selezione
-            },
-            {
-                'value': 'uscita', 
-                'text': 'USCITA',
-                'arrow': '←',  # Freccia a sinistra  
-                'color': '#424242',  # Grigio scuro
-                'selected_color': '#212121'  # Grigio molto scuro per selezione
-            }
-        ]
-        
-        # Grid per selettori 1x2 (due pulsanti affiancati)
-        selectors_frame.grid_rowconfigure(0, weight=1)
-        selectors_frame.grid_columnconfigure(0, weight=1)
-        selectors_frame.grid_columnconfigure(1, weight=1)
-        
-        # Crea selettori
-        self.selector_buttons = {}
-        for i, config in enumerate(selectors_config):
-            # Posiziona i 2 pulsanti affiancati (riga 0, colonne 0 e 1)
-            row = 0
-            col = i
-            self.create_enterprise_selector_button(selectors_frame, config, row, col)
+    def _start_transfer_scheduler(self):
+        """Avvia un thread daemon che esegue l'export TXT ogni giorno all'ora configurata."""
+        if self._transfer_thread and self._transfer_thread.is_alive():
+            return
 
-    def select_timbratura_type(self, value):
-        """Seleziona tipo timbratura - Design Enterprise"""
+        def _loop():
+            while not self._transfer_stop.is_set():
+                try:
+                    ora_str, _, _, _ = self._read_transfer_settings()
+                    # Parse orario con tolleranza: accetta "HH:MM", "HH.MM", "HHMM" o solo "H/H H"
+                    hh, mm = 2, 0  # default 02:00
+                    try:
+                        s = (ora_str or '').strip()
+                        s = s.replace('.', ':')
+                        s = s.replace(' ', '')
+                        if ':' in s:
+                            parts = s.split(':')
+                            if len(parts) >= 2:
+                                hh = int(parts[0])
+                                mm = int(parts[1][:2])
+                        elif len(s) in (3, 4) and s.isdigit():
+                            # Es. 930 -> 09:30, 1430 -> 14:30
+                            hh = int(s[:-2])
+                            mm = int(s[-2:])
+                        elif len(s) in (1, 2) and s.isdigit():
+                            # Solo ora
+                            hh = int(s)
+                            mm = 0
+                        # Normalizza range
+                        hh = max(0, min(23, hh))
+                        mm = max(0, min(59, mm))
+                    except Exception:
+                        pass
+                    now = datetime.now()
+                    run_at = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+                    if run_at <= now:
+                        # Se l'orario odierno è appena passato (entro 60s), esegui tra 5s; altrimenti programma domani
+                        from datetime import timedelta
+                        if (now - run_at).total_seconds() <= 60:
+                            run_at = now + timedelta(seconds=5)
+                        else:
+                            run_at = run_at + timedelta(days=1)
+                    wait_s = max(1, int((run_at - now).total_seconds()))
+                    print(f"[TRANSFER] Scheduler prossimo run alle {run_at.strftime('%Y-%m-%d %H:%M:%S')} (tra {wait_s}s)")
+                    # Attendi in porzioni per permettere stop rapido
+                    step = 5
+                    waited = 0
+                    while waited < wait_s and not self._transfer_stop.is_set():
+                        chunk = min(step, wait_s - waited)
+                        time.sleep(chunk)
+                        waited += chunk
+                    if self._transfer_stop.is_set():
+                        break
+                    # Esegui export
+                    print(f"[TRANSFER] Scheduler avvio export alle {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    self.export_pending_timbrature_to_txt()
+                    # poi loop per il prossimo giorno
+                except Exception as e:
+                    print(f"[TRANSFER] Scheduler errore: {e}")
+                    time.sleep(30)
+
+        self._transfer_stop.clear()
+        t = threading.Thread(target=_loop, name='TransferScheduler', daemon=True)
+        t.start()
+        self._transfer_thread = t
+
+    def _stop_transfer_scheduler(self):
         try:
-            # Feedback sonoro per selezione
-            self.play_sound('selection')
-            
-            self.timbratura_type.set(value)
-            
-            # Aggiorna il testo della selezione
-            if hasattr(self, 'selection_label'):
-                if value == 'entrata':
-                    self.selection_label.configure(text="SELEZIONE: ENTRATA", fg='#1976D2')
-                else:
-                    self.selection_label.configure(text="SELEZIONE: USCITA", fg='#424242')
-            
-            # Aggiorna stile di selezione per pulsanti enterprise
-            for key, refs in getattr(self, 'selector_buttons', {}).items():
-                button = refs.get('button')
-                content = refs.get('content')
-                arrow = refs.get('arrow')
-                text = refs.get('text')
-                config = refs.get('config', {})
-                
-                if not button:
-                    continue
-                    
-                if key == value:
-                    # Selezionato - bordo spesso e colore di selezione
-                    button.configure(bg=config.get('selected_color', '#1976D2'), 
-                                   bd=6, relief='solid')
-                    if content: content.configure(bg=config.get('selected_color', '#1976D2'))
-                    if arrow: arrow.configure(bg=config.get('selected_color', '#1976D2'), fg='#FFFFFF')
-                    if text: text.configure(bg=config.get('selected_color', '#1976D2'), fg='#FFFFFF')
-                else:
-                    # Non selezionato - stile neutro
-                    button.configure(bg='#F5F5F5', bd=3, relief='solid')
-                    if content: content.configure(bg='#F5F5F5')
-                    if arrow: arrow.configure(bg='#F5F5F5', fg=config.get('color', '#424242'))
-                    if text: text.configure(bg='#F5F5F5', fg=config.get('color', '#424242'))
-                    
-        except Exception as e:
-            print(f"❌ Errore selezione enterprise: {e}")
+            self._transfer_stop.set()
+            t = self._transfer_thread
+            if t and t.is_alive():
+                t.join(timeout=1.5)
+        except Exception:
+            pass
+
+    def _restart_transfer_scheduler(self):
+        self._stop_transfer_scheduler()
+        self._start_transfer_scheduler()
     
-    def create_enterprise_selector_button(self, parent, config, row, col):
-        """Crea pulsanti selettori enterprise - Design minimalista giganti (min 200x200)"""
-        # Container principale
-        container = tk.Frame(parent, bg='#FFFFFF')
-        container.grid(row=row, column=col, padx=20, pady=20, sticky='ew')
-        
-        # Pulsante selettore enterprise gigante (min 200x200)
-        button = tk.Frame(container,
-                         bg='#F5F5F5',
-                         relief='solid',
-                         bd=3,
-                         highlightthickness=0,
-                         width=250,  # Più grande di 200x200
-                         height=200)
-        button.pack_propagate(False)
-        button.pack()
-        
-        # Container per contenuto centrato
-        content = tk.Frame(button, bg='#F5F5F5')
-        content.place(relx=0.5, rely=0.5, anchor='center')
-        
-        # Freccia grande e elegante
-        arrow_label = tk.Label(content, 
-                              text=config['arrow'],
-                              font=('Segoe UI', 48, 'bold'),
-                              fg=config['color'],
-                              bg='#F5F5F5')
-        arrow_label.pack(pady=(0, 10))
-        
-        # Testo principale grande
-        text_label = tk.Label(content,
-                             text=config['text'],
-                             font=('Segoe UI', 24, 'bold'),
-                             fg=config['color'],
-                             bg='#F5F5F5')
-        text_label.pack()
-        
-        # Salva riferimenti per aggiornamenti
-        value = config['value']
-        self.selector_buttons[value] = {
-            'button': button,
-            'content': content,
-            'arrow': arrow_label,
-            'text': text_label,
-            'config': config
-        }
-        
-        # Bind eventi per interazione
-        for widget in [button, content, arrow_label, text_label]:
-            widget.bind("<Button-1>", lambda e, v=value: self.select_timbratura_type(v))
-            widget.bind("<Enter>", lambda e, v=value: self.hover_enterprise_selector(v, True))
-            widget.bind("<Leave>", lambda e, v=value: self.hover_enterprise_selector(v, False))
-    
-    def hover_enterprise_selector(self, value, is_entering):
-        """Effetto hover per selettori enterprise"""
-        try:
-            refs = self.selector_buttons.get(value, {})
-            button = refs.get('button')
-            if not button:
-                return
-                
-            current_selection = self.timbratura_type.get()
-            
-            if is_entering and value != current_selection:
-                # Hover su pulsante non selezionato
-                button.configure(bd=4, highlightbackground='#BDBDBD')
-            elif not is_entering and value != current_selection:
-                # Lascia hover su pulsante non selezionato
-                button.configure(bd=3, highlightbackground='#E0E0E0')
-        except Exception as e:
-            print(f"❌ Errore hover enterprise: {e}")
-            
-    def create_selector_button(self, parent, config, row, col):
-        """Crea pulsanti selettori radio-style moderni"""
-        # Container principale
-        container = tk.Frame(parent, bg='#FFFFFF')
-        container.grid(row=row, column=col, padx=15, pady=15, sticky='ew')
-        
-        # Pulsante selettore con stile radio (40% più grande)
-        button = tk.Frame(container,
-                         bg='#E0E0E0',
-                         relief='solid',
-                         bd=2,
-                         highlightthickness=0,
-                         width=224,
-                         height=168)
-        button.pack_propagate(False)
-        button.pack()
 
-        # Frame contenuto con padding
-        content = tk.Frame(button, bg='#F5F5F5')
-        content.pack(expand=True, fill='both', padx=15, pady=15)
+    def create_large_clock(self, parent):
+        """Crea orologio e data centralizzati con padding ottimizzato (meno bianco sotto)."""
+        # Costanti per il clock (adattate)
+        CLOCK_TOP_PADDING_RATIO = 0.008
+        CLOCK_BOTTOM_PADDING_RATIO = 0.002  # ridotto per meno bianco sotto
+        TIME_FONT_SIZE_RATIO = 0.20
+        DATE_FONT_SIZE_RATIO = 0.032
+        DATE_TOP_PADDING_RATIO = 0.004  # ridotto
+        
+        BRAND_TEXT_COLOR = '#5FA8AF'
+        
+        clock_wrapper = tk.Frame(parent, bg='#FFFFFF')
+        clock_wrapper.pack(pady=(
+            int(self.vh * CLOCK_TOP_PADDING_RATIO), 
+            int(self.vh * CLOCK_BOTTOM_PADDING_RATIO)
+        ))
+        
+        self.time_var = tk.StringVar()
+        self.date_var = tk.StringVar()
+        
+        time_font_size = max(self.s(112), int(self.vh * TIME_FONT_SIZE_RATIO))
+        date_font_size = max(self.s(20), int(self.vh * DATE_FONT_SIZE_RATIO))
+        
+        self.time_label = tk.Label(
+            clock_wrapper, 
+            textvariable=self.time_var,
+            font=('Segoe UI', time_font_size, 'bold'),
+            bg='#FFFFFF', 
+            fg=BRAND_TEXT_COLOR,
+            anchor='center'
+        )
+        self.time_label.pack()
+        
+        self.date_label = tk.Label(
+            clock_wrapper, 
+            textvariable=self.date_var,
+            font=('Segoe UI', date_font_size, 'bold'),
+            bg='#FFFFFF', 
+            fg=BRAND_TEXT_COLOR,
+            anchor='center'
+        )
+        self.date_label.pack(pady=(int(self.vh * DATE_TOP_PADDING_RATIO), 0))
+        
+        self.update_tigota_clock()
 
-        # Frame per l'icona centrata
-        icon_frame = tk.Frame(content, bg='#F5F5F5')
-        icon_frame.pack(expand=True, fill='both')
-
-        if config['value'] == 'entrata':
-            # Carica immagine ENTRATA
+    def create_action_buttons(self, parent):
+        """Crea i selettori Ingresso/Uscita con istruzioni sotto (mutualmente esclusivi), più centrati e con meno spazio sotto."""
+        BUTTONS_TOP_PADDING_RATIO = 0.006
+        BUTTONS_BOTTOM_PADDING_RATIO = 0.005  # ridotto
+        BUTTON_SPACING_RATIO = 0.04
+        INSTRUCTIONS_TOP_PADDING_RATIO = 0.006  # ridotto
+        INSTRUCTIONS_COLOR = '#5FA8AF'
+        
+        buttons_wrapper = tk.Frame(parent, bg='#FFFFFF')
+        buttons_wrapper.pack(pady=(
+            int(self.vh * BUTTONS_TOP_PADDING_RATIO), 
+            int(self.vh * BUTTONS_BOTTOM_PADDING_RATIO)
+        ))
+        
+        buttons_row = tk.Frame(buttons_wrapper, bg='#FFFFFF')
+        buttons_row.pack()
+        
+        def select_ingresso():
+            self.selected_action = 'in'
+            if hasattr(self, 'btn_ingresso') and self.btn_ingresso:
+                self.btn_ingresso['set_selected'](True)
+            if hasattr(self, 'btn_uscita') and self.btn_uscita:
+                self.btn_uscita['set_selected'](False)
+            print('[UI] Selezionato: Ingresso')
+            # Aggiorna messaggio sotto le istruzioni
+            if hasattr(self, 'selection_hint_var'):
+                self.selection_hint_var.set('Selezionato: Ingresso — avvicina il badge al lettore')
+            if hasattr(self, 'selection_hint_label'):
+                self.selection_hint_label.config(fg='#20B2AA')
+            # Abilita lettura NFC
             try:
-                entrata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "immagini", "ENTRATA.png")
-                if os.path.exists(entrata_path):
-                    from PIL import Image, ImageTk
-                    entrata_img = Image.open(entrata_path)
-                    entrata_img = entrata_img.resize((130, 130), Image.Resampling.LANCZOS)
-                    entrata_photo = ImageTk.PhotoImage(entrata_img)
-                    if not hasattr(self, 'selector_images'): 
-                        self.selector_images = {}
-                    self.selector_images['entrata'] = entrata_photo
-                    porta_label = tk.Label(icon_frame, image=entrata_photo, bg='#F5F5F5')
-                else:
-                    porta_label = tk.Label(icon_frame, text='🚪', font=('Segoe UI Emoji', 26), 
-                                         bg='#F5F5F5', fg='#2196F3')
+                self.enable_nfc_reading()
             except Exception as e:
-                print(f"⚠️ Errore caricamento ENTRATA: {e}")
-                porta_label = tk.Label(icon_frame, text='🚪', font=('Segoe UI Emoji', 26), 
-                                     bg='#F5F5F5', fg='#2196F3')
-            porta_label.pack(expand=True)
+                print(f"[NFC] Errore attivazione lettura: {e}")
+        
+        def select_uscita():
+            self.selected_action = 'out'
+            if hasattr(self, 'btn_ingresso') and self.btn_ingresso:
+                self.btn_ingresso['set_selected'](False)
+            if hasattr(self, 'btn_uscita') and self.btn_uscita:
+                self.btn_uscita['set_selected'](True)
+            print('[UI] Selezionato: Uscita')
+            # Aggiorna messaggio sotto le istruzioni
+            if hasattr(self, 'selection_hint_var'):
+                self.selection_hint_var.set('Selezionato: Uscita — avvicina il badge al lettore')
+            if hasattr(self, 'selection_hint_label'):
+                self.selection_hint_label.config(fg='#E91E63')
+            # Abilita lettura NFC
+            try:
+                self.enable_nfc_reading()
+            except Exception as e:
+                print(f"[NFC] Errore attivazione lettura: {e}")
+        
+        self.btn_ingresso = self.create_pill_button(
+            buttons_row, 
+            'Ingresso', 
+            '#20B2AA', 
+            '#FFFFFF', 
+            select_ingresso
+        )
+        self.btn_ingresso['canvas'].pack(side='left')
+        
+        spacer = tk.Frame(
+            buttons_row, 
+            width=int(self.vw * BUTTON_SPACING_RATIO), 
+            bg='#FFFFFF'
+        )
+        spacer.pack(side='left')
+        
+        self.btn_uscita = self.create_pill_button(
+            buttons_row, 
+            'Uscita', 
+            '#E91E63', 
+            '#FFFFFF', 
+            select_uscita
+        )
+        self.btn_uscita['canvas'].pack(side='left')
+        
+        self.btn_ingresso['set_selected'](False)
+        self.btn_uscita['set_selected'](False)
+        self.selected_action = None
+        
+        instructions_wrapper = tk.Frame(buttons_wrapper, bg='#FFFFFF')
+        instructions_wrapper.pack(pady=(int(self.vh * INSTRUCTIONS_TOP_PADDING_RATIO), 0))
+        
+        instr_font = max(self.s(12), int(self.vh * 0.020))
+        tk.Label(
+            instructions_wrapper,
+            text="1. Seleziona Ingresso/Uscita",
+            font=('Segoe UI', instr_font, 'normal'),
+            bg='#FFFFFF',
+            fg=INSTRUCTIONS_COLOR
+        ).pack()
+        tk.Label(
+            instructions_wrapper,
+            text="2. Avvicina il badge al lettore",
+            font=('Segoe UI', instr_font, 'normal'),
+            bg='#FFFFFF',
+            fg=INSTRUCTIONS_COLOR
+        ).pack()
+
+        # Messaggio dinamico con selezione e invito ad avvicinare il badge
+        self.selection_hint_var = tk.StringVar(value='')
+        self.selection_hint_label = tk.Label(
+            instructions_wrapper,
+            textvariable=self.selection_hint_var,
+            font=('Segoe UI', instr_font, 'bold'),
+            bg='#FFFFFF',
+            fg=INSTRUCTIONS_COLOR
+        )
+        self.selection_hint_label.pack(pady=(int(self.vh * 0.004), 0))
+
+    def create_nfc_indicator(self, parent):
+        """Crea indicatore NFC in basso a destra; solo logo (senza testo), più grande."""
+        # Container per la barra inferiore (nuova row 4)
+        nfc_bar = tk.Frame(parent, bg='#FFFFFF')
+        nfc_bar.grid(row=4, column=0, sticky='sew')
+
+        nfc_container = tk.Frame(nfc_bar, bg='#FFFFFF')
+        nfc_container.pack(side='right', padx=self.s(16), pady=(self.s(8), self.s(96)))
+
+        # Logo massimo (≈25% dell'altezza viewport, minimo 200px)
+        icon_size = max(self.s(200), int(self.vh * 0.25))
+
+        # Prova a caricare un logo NFC dalla cartella immagini; se non trovato, fallback all'icona disegnata
+        self.nfc_photo = None
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            # 1) Priorità: percorso specificato dall'utente
+            preferred_paths = [
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.png'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.gif'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.jpg'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.jpeg'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.PNG'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.GIF'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.JPG'),
+                os.path.join(base_dir, 'Immagini', 'logo_nfc.JPEG'),
+            ]
+            logo_path = next((p for p in preferred_paths if os.path.exists(p)), None)
+
+            # 2) Fallback: ricerca generica in cartelle comuni
+            if not logo_path:
+                candidate_dirs = ['', 'immagini', 'Immagini', 'images', 'Images', 'assets', 'static', 'resources', 'res']
+                candidate_names = [
+                    'nfc.png', 'nfc_logo.png', 'logo_nfc.png', 'nfc-icon.png', 'nfc_icon.png', 'nfc.gif',
+                    'logo_nfc.jpg', 'logo_nfc.jpeg', 'nfc.jpg', 'nfc.jpeg', 'nfc_logo.jpg'
+                ]
+                for d in candidate_dirs:
+                    for name in candidate_names:
+                        p = os.path.join(base_dir, d, name) if d else os.path.join(base_dir, name)
+                        if os.path.exists(p):
+                            logo_path = p
+                            break
+                    if logo_path:
+                        break
+
+            if logo_path:
+                ext = os.path.splitext(logo_path)[1].lower()
+                # Preferisci Pillow per qualità e per supporto JPEG
+                if PIL_AVAILABLE:
+                    try:
+                        pil_img = Image.open(logo_path)
+                        w, h = pil_img.size
+                        if w > 0 and h > 0:
+                            scale = icon_size / max(w, h)
+                            new_w = max(1, int(round(w * scale)))
+                            new_h = max(1, int(round(h * scale)))
+                            resample = Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS
+                            pil_img = pil_img.resize((new_w, new_h), resample)
+                        self.nfc_photo = ImageTk.PhotoImage(pil_img)
+                    except Exception:
+                        self.nfc_photo = None
+                else:
+                    # Fallback: usa PhotoImage solo per PNG/GIF
+                    if ext in ('.png', '.gif'):
+                        img = tk.PhotoImage(file=logo_path)
+                        # Downscale se troppo grande; upscaling non gestito senza Pillow
+                        if img.width() > icon_size:
+                            factor = max(1, img.width() // icon_size)
+                            img = img.subsample(factor, factor)
+                        self.nfc_photo = img
+                    else:
+                        self.nfc_photo = None
+        except Exception:
+            self.nfc_photo = None
+
+        if self.nfc_photo is not None:
+            img_label = tk.Label(nfc_container, image=self.nfc_photo, bg='#FFFFFF')
+            img_label.pack(side='left', padx=(0, self.s(6)))
         else:
-            # Carica immagine USCITA
+            # Fallback: icona disegnata come prima
+            nfc_canvas = tk.Canvas(
+                nfc_container,
+                width=icon_size,
+                height=icon_size,
+                bg='#FFFFFF',
+                highlightthickness=0,
+                bd=0
+            )
+            nfc_canvas.pack(side='left', padx=(0, self.s(6)))
+
+            card_size = int(icon_size * 0.4)
+            card_x = (icon_size - card_size) // 2
+            card_y = int(icon_size * 0.3)
+
+            nfc_canvas.create_rectangle(
+                card_x, card_y,
+                card_x + card_size, card_y + int(card_size * 0.6),
+                outline='#777777',
+                width=2
+            )
+
+            wave_center_x = card_x - int(card_size * 0.3)
+            wave_center_y = card_y + int(card_size * 0.3)
+
+            for radius in [8, 12, 16]:
+                scaled_radius = self.s(radius)
+                nfc_canvas.create_arc(
+                    wave_center_x - scaled_radius,
+                    wave_center_y - scaled_radius,
+                    wave_center_x + scaled_radius,
+                    wave_center_y + scaled_radius,
+                    start=-30,
+                    extent=60,
+                    style='arc',
+                    outline='#777777',
+                    width=2
+                )
+
+        # Nota: rimosso testo "NFC" su richiesta, resta solo il logo
+
+    def update_tigota_clock(self):
+        """Aggiorna orologio e data con gestione errori migliorata."""
+        try:
+            now = datetime.now()
+            
+            # Formato tempo HH:MM
+            time_str = now.strftime('%H:%M')
+            self.time_var.set(time_str)
+            
+            # Formato data italiana completa
+            giorni_settimana = [
+                'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 
+                'Venerdì', 'Sabato', 'Domenica'
+            ]
+            mesi_anno = [
+                'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+            ]
+            
+            giorno_settimana = giorni_settimana[now.weekday()]
+            mese = mesi_anno[now.month - 1]
+            
+            date_str = f"{giorno_settimana} {now.day} {mese} {now.year}"
+            self.date_var.set(date_str)
+            
+        except Exception as e:
+            print(f"Errore aggiornamento clock: {e}")
+            # Fallback con valori safe
+            self.time_var.set("--:--")
+            self.date_var.set("-- -- ---- ----")
+        
+        finally:
+            # Schedula prossimo aggiornamento
+            if hasattr(self, 'root') and self.root:
+                self.root.after(1000, self.update_tigota_clock)
+
+    # --- NFC integration ---
+    def enable_nfc_reading(self):
+        """Avvia la lettura del badge NFC dopo la selezione dell'evento."""
+        try:
+            print("[NFC] enable_nfc_reading: richiesta avvio")
+            # Ferma un'eventuale lettura precedente
+            if getattr(self, 'nfc_reader', None):
+                try:
+                    self.nfc_reader.stop_reading()
+                except Exception:
+                    pass
+            # Crea nuovo lettore con callback
+            self.nfc_reader = NFCReader(callback=self.on_badge_read)
+            self.nfc_reader.start_reading()
+            print("[NFC] Lettura abilitata: avvicina il badge")
+
+            # Attiva anche la cattura tastiera (ID Card Reader)
+            self._start_keyboard_capture()
+        except Exception as e:
+            print(f"[NFC] Impossibile avviare lettura: {e}")
+
+    def on_badge_read(self, badge_id: str):
+        """Callback eseguito al rilevamento del badge; aggiorna l'UI in main thread e ferma la lettura."""
+        try:
+            # Verifica se il badge è abbinato ad un dipendente
+            is_known = False
+            dip_nome = None
+            dip_cognome = None
             try:
-                uscita_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "immagini", "USCITA.png")
-                if os.path.exists(uscita_path):
-                    from PIL import Image, ImageTk
-                    uscita_img = Image.open(uscita_path)
-                    uscita_img = uscita_img.resize((130, 130), Image.Resampling.LANCZOS)
-                    uscita_photo = ImageTk.PhotoImage(uscita_img)
-                    if not hasattr(self, 'selector_images'): 
-                        self.selector_images = {}
-                    self.selector_images['uscita'] = uscita_photo
-                    porta_label = tk.Label(icon_frame, image=uscita_photo, bg='#F5F5F5')
+                from database_sqlite import get_database_manager
+                db = get_database_manager()
+                dip = db.get_dipendente_by_badge(badge_id)
+                if dip:
+                    is_known = True
+                    dip_nome = dip.get('nome')
+                    dip_cognome = dip.get('cognome')
+            except Exception as db_err:
+                print(f"[DB] Impossibile verificare badge nel DB: {db_err}")
+
+            # Aggiorna UI in modo thread-safe e salva timbratura
+            def _update_ui():
+                try:
+                    if hasattr(self, 'selection_hint_var') and self.selection_hint_var is not None:
+                        # Determina azione selezionata
+                        action = getattr(self, 'selected_action', None)
+                        tipo_str = 'entrata' if action == 'in' else ('uscita' if action == 'out' else None)
+                        if not tipo_str:
+                            # Nessuna azione selezionata: notifica e non salvare
+                            self.selection_hint_var.set("Seleziona Ingresso o Uscita prima di timbrare")
+                            if hasattr(self, 'selection_hint_label') and self.selection_hint_label is not None:
+                                self.selection_hint_label.config(fg='#EF4444')
+                            try:
+                                winsound.Beep(440, 220)
+                            except Exception:
+                                try:
+                                    winsound.MessageBeep(winsound.MB_ICONHAND)
+                                except Exception:
+                                    pass
+                            return
+
+                        if is_known:
+                            azione = 'Ingresso' if self.selected_action == 'in' else ('Uscita' if self.selected_action == 'out' else '—')
+                            nominativo = (dip_nome or '').strip()
+                            if dip_cognome:
+                                nominativo = f"{nominativo} {dip_cognome.strip()}".strip()
+                            msg = f"{('Ciao ' + nominativo + ' — ') if nominativo else ''}Badge: {badge_id} — {azione} registrata"
+                            self.selection_hint_var.set(msg)
+                            if hasattr(self, 'selection_hint_label') and self.selection_hint_label is not None:
+                                self.selection_hint_label.config(fg='#20B2AA' if self.selected_action == 'in' else '#E91E63')
+                            # Beep di conferma lettura
+                            try:
+                                winsound.Beep(1000, 150)
+                            except Exception:
+                                try:
+                                    winsound.MessageBeep()
+                                except Exception:
+                                    pass
+                            # Salva timbratura nel DB (nota: sync_status default = 'pending')
+                            try:
+                                if 'db' in locals():
+                                    db.save_timbratura(badge_id, tipo_str, dip_nome, dip_cognome)
+                            except Exception as se:
+                                print(f"[DB] Errore salvataggio timbratura: {se}")
+                        else:
+                            # Badge non riconosciuto: mostra messaggio di attenzione in rosso
+                            self.selection_hint_var.set("Attenzione: badge non riconosciuto")
+                            if hasattr(self, 'selection_hint_label') and self.selection_hint_label is not None:
+                                self.selection_hint_label.config(fg='#EF4444')  # rosso di avviso
+                            # Beep di errore
+                            try:
+                                winsound.Beep(440, 220)
+                            except Exception:
+                                try:
+                                    winsound.MessageBeep(winsound.MB_ICONHAND)
+                                except Exception:
+                                    pass
+                            # Salva comunque la timbratura (senza nominativo), per tracciamento
+                            try:
+                                if 'db' in locals() and tipo_str:
+                                    db.save_timbratura(badge_id, tipo_str, None, None)
+                            except Exception as se:
+                                print(f"[DB] Errore salvataggio timbratura (unknown badge): {se}")
+                except Exception:
+                    pass
+                # Ferma lettore dopo una lettura per evitare duplicati rapidi
+                try:
+                    if getattr(self, 'nfc_reader', None):
+                        self.nfc_reader.stop_reading()
+                        print("[NFC] Lettura fermata dopo badge")
+                except Exception:
+                    pass
+                # Disattiva cattura tastiera
+                try:
+                    self._stop_keyboard_capture()
+                except Exception:
+                    pass
+            if hasattr(self, 'root') and self.root:
+                self.root.after(0, _update_ui)
+            else:
+                _update_ui()
+        except Exception as e:
+            print(f"[NFC] Errore in callback badge: {e}")
+
+    # --- Keyboard wedge capture (ID Card Reader) ---
+    def _setup_keyboard_capture(self):
+        """Crea un Entry nascosto per catturare input tastiera dai lettori USB "ID Card Reader"."""
+        if not hasattr(self, 'root') or not self.root:
+            return
+        if self._hid_entry is not None:
+            return
+        # Entry invisibile e molto piccolo, fuori dallo schermo
+        self._hid_entry = tk.Entry(self.root)
+        try:
+            self._hid_entry.place(x=-1000, y=-1000, width=1, height=1)
+        except Exception:
+            # Fallback
+            self._hid_entry.pack_forget()
+        # Bind eventi tasti
+        self._hid_entry.bind('<Key>', self._on_hid_key)
+        self._hid_entry.bind('<Return>', self._on_hid_return)
+        # Mantieni focus se attiva la cattura
+        self._hid_entry.bind('<FocusOut>', lambda e: self._refocus_hid() if self._capture_active else None)
+
+    def _start_keyboard_capture(self):
+        self._badge_buffer = ''
+        self._capture_active = True
+        print("[NFC] Keyboard capture: START")
+        self._refocus_hid()
+        # Ripeti il refocus poco dopo per sicurezza
+        try:
+            if hasattr(self, 'root') and self.root:
+                self.root.after(50, self._refocus_hid)
+        except Exception:
+            pass
+
+    def _stop_keyboard_capture(self):
+        self._capture_active = False
+        self._badge_buffer = ''
+
+    def _refocus_hid(self):
+        try:
+            if self._hid_entry is not None and self._capture_active:
+                if hasattr(self, 'root') and self.root:
+                    # Esegui il focus in maniera asincrona per evitare blocchi nell'handler di click
+                    self.root.after(0, lambda: self._hid_entry.focus_set())
                 else:
-                    porta_label = tk.Label(icon_frame, text='🚪', font=('Segoe UI Emoji', 26), 
-                                         bg='#F5F5F5', fg='#000000')
+                    self._hid_entry.focus_set()
+        except Exception:
+            pass
+
+    def _on_hid_key(self, event):
+        if not self._capture_active:
+            return
+        try:
+            if event.keysym == 'Return':
+                self._on_hid_return(event)
+                return
+            ch = event.char
+            # Accetta solo stampabili (evita ctrl, shift, ecc.)
+            if ch and ch.isprintable():
+                self._badge_buffer += ch
+        except Exception:
+            pass
+
+    def _on_hid_return(self, event):
+        if not self._capture_active:
+            return
+        badge = (self._badge_buffer or '').strip()
+        self._badge_buffer = ''
+        if badge:
+            # Gestisci direttamente come lettura badge
+            print(f"[NFC] Badge (ID Card Reader): {badge}")
+            try:
+                self.on_badge_read(badge)
             except Exception as e:
-                print(f"⚠️ Errore caricamento USCITA: {e}")
-                porta_label = tk.Label(icon_frame, text='🚪', font=('Segoe UI Emoji', 26), 
-                                     bg='#F5F5F5', fg='#000000')
-            porta_label.pack(expand=True)
+                print(f"[NFC] Errore gestione badge tastiera: {e}")
 
-        # Click handler
-        def on_click(event):
-            self.select_timbratura_type(config['value'])
-        
-        # Hover effects per pulsanti selettori
-        def on_enter(event):
-            if config['value'] != self.timbratura_type.get():
-                button.configure(bg='#E8E8E8', bd=3, relief='solid')
-                content.configure(bg='#E8E8E8')
-                icon_frame.configure(bg='#E8E8E8')
-                porta_label.configure(bg='#E8E8E8')
-
-        def on_leave(event):
-            if config['value'] != self.timbratura_type.get():
-                button.configure(bg='#F5F5F5', bd=2, relief='solid')
-                content.configure(bg='#F5F5F5')
-                icon_frame.configure(bg='#F5F5F5')
-                porta_label.configure(bg='#F5F5F5')
-                content.configure(bg=config['bg_color'])
-
-        widgets = [button, content, icon_frame, porta_label]
-        for widget in widgets:
-            widget.bind('<Button-1>', on_click)
-            widget.bind('<Enter>', on_enter)
-            widget.bind('<Leave>', on_leave)
-            widget.configure(cursor='hand2')
-        
-        # Salva riferimenti
-        self.selector_buttons[config['value']] = {
-            'container': container,
-            'button': button,
-            'content': content,
-            'icon_frame': icon_frame,
-            'porta_label': porta_label,
-            'config': config
-        }
-        
-        # Selezione iniziale
-        if config['value'] == self.timbratura_type.get():
-            self.select_timbratura_type(config['value'])
-        
-    # Rimuoviamo duplicati: handler già definiti e bind già applicati sopra
-    # Selezione iniziale è già gestita sopra
-
-    def _on_circle_hover_enter(self, canvas, circle_id, config):
-        """Hover enter per bottoni circolari"""
+    def select_action(self, action_type):
+        """Con selettori: aggiorna lo stato selezionato senza popup; logga eventuale mancata selezione."""
         try:
-            # Effetto ingrandimento del cerchio
-            canvas.itemconfig(circle_id, width=6)  # Bordo più spesso
-            canvas.configure(bg='#F8F9FA')  # Sfondo leggermente diverso
+            if action_type == 'in':
+                self.selected_action = 'in'
+                if hasattr(self, 'btn_ingresso'):
+                    self.btn_ingresso['set_selected'](True)
+                if hasattr(self, 'btn_uscita'):
+                    self.btn_uscita['set_selected'](False)
+                print('[UI] Selezionato: Ingresso')
+            elif action_type == 'out':
+                self.selected_action = 'out'
+                if hasattr(self, 'btn_ingresso'):
+                    self.btn_ingresso['set_selected'](False)
+                if hasattr(self, 'btn_uscita'):
+                    self.btn_uscita['set_selected'](True)
+                print('[UI] Selezionato: Uscita')
+            else:
+                print(f"[UI] Azione non riconosciuta: {action_type}")
+                return
         except Exception as e:
-            print(f"❌ Errore hover enter: {e}")
-    
-    def _on_circle_hover_leave(self, canvas, circle_id, config):
-        """Hover leave per bottoni circolari"""
-        try:
-            # Ripristina dimensioni normali
-            canvas.itemconfig(circle_id, width=4)  # Bordo normale
-            canvas.configure(bg='#FFFFFF')  # Sfondo bianco
-        except Exception as e:
-            print(f"❌ Errore hover leave: {e}")
-    # Fine hover_leave; rimosso blocco PNG errato
-    
-    def schedule_real_data_update(self):
-        """Programma aggiornamenti automatici dei dati reali"""
-        try:
-            # Aggiorna dati dipendenti dal database reale
-            if hasattr(self, 'update_real_employee_data'):
-                self.update_real_employee_data()
-            
-            # Programma prossimo aggiornamento tra 30 secondi
-            self.root.after(30000, self.schedule_real_data_update)
-        except Exception as e:
-            print(f"❌ Errore aggiornamento automatico: {e}")
-            # Riprova tra 60 secondi se c'è un errore
-            self.root.after(60000, self.schedule_real_data_update)
-            
-    def run(self):
-        """Avvia app elite"""
-        try:
-            self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-            self.root.mainloop()
-        except KeyboardInterrupt:
-            self.cleanup()
-            
-    def on_closing(self):
-        """Chiusura"""
-        self.cleanup()
-        self.root.destroy()
+            print(f"Errore nella gestione selezione {action_type}: {e}")
 
-def main():
-    """Main function"""
-    try:
-        app = TigotaEliteDashboard()
-        app.run()
-    except Exception as e:
-        print(f"Errore: {e}")
-        import traceback
-        traceback.print_exc()
+    def load_kiosk_config(self):
+        """Fallback: imposta configurazione kiosk di base se non presente."""
+        # In un setup reale potremmo leggere da config.ini; qui impostiamo default sicuri
+        self.kiosk_mode_active = True
+        self.kiosk_exit_pin = self.kiosk_exit_pin or "2580"
+        # Flag tablet per font/padding maggiorati
+        self.is_tablet_resolution = True
 
 if __name__ == "__main__":
-    main()
+    import tkinter as tk
+    from tkinter import messagebox
+
+    root = tk.Tk()
+    root.title("TIGOTÀ Elite - Sistema Timbratura")
+    # Full-screen per tablet 8" (kiosk-like)
+    try:
+        root.attributes('-fullscreen', True)
+    except Exception:
+        # Fallback: massimizza
+        root.state('zoomed')
+    root.configure(bg="#FFFFFF")
+
+    dashboard = TigotaEliteDashboard()
+    dashboard.set_root(root)
+    dashboard.build_dashboard(root)
+
+    # Garantisce lo stop dello scheduler alla chiusura applicazione
+    def _on_close():
+        try:
+            dashboard._stop_transfer_scheduler()
+        except Exception:
+            pass
+        try:
+            root.destroy()
+        except Exception:
+            pass
+    try:
+        root.protocol('WM_DELETE_WINDOW', _on_close)
+    except Exception:
+        pass
+
+    print("✅ TIGOTÀ Elite Dashboard full-screen pronto per tablet 8\"")
+    root.mainloop()
 
 
 
