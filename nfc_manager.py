@@ -65,9 +65,21 @@ class NFCReader:
         print("🔒 Lettore NFC fermato (non-bloccante)")
             
     def _read_loop(self):
-        """Loop principale per la lettura NFC"""
+        """Loop principale per la lettura NFC con timeout di sicurezza."""
+        max_iterations = 1800  # 15 minuti max (1800 * 0.5s = 900s)
+        iteration_count = 0
+        
         try:
-            while self.is_reading and not self._stop_event.is_set():
+            while (self.is_reading and 
+                   not self._stop_event.is_set() and 
+                   iteration_count < max_iterations):
+                   
+                iteration_count += 1
+                
+                # Controllo di sicurezza ogni 100 iterazioni
+                if iteration_count % 100 == 0:
+                    print(f"[NFC] Monitoring: {iteration_count} iterazioni, {len(os.listdir('.'))} files")
+                
                 if self.simulation_mode:
                     # MODALITÀ SIMULAZIONE DISABILITATA - NO DEMO AUTOMATICHE
                     # Usa wait così lo stop è immediato
@@ -86,10 +98,17 @@ class NFCReader:
                         self._stop_event.wait(2.0)
                     else:
                         # Attesa breve se nessun badge rilevato
-                        self._stop_event.wait(0.2)
+                        self._stop_event.wait(0.3)  # Aumentato da 0.2s per ridurre carico CPU
+                        
+            # Log finale per debugging
+            if iteration_count >= max_iterations:
+                print(f"[NFC] Loop terminato per timeout di sicurezza ({max_iterations} iterazioni)")
+            else:
+                print(f"[NFC] Loop terminato normalmente dopo {iteration_count} iterazioni)")
                     
         except Exception as e:
             print(f"❌ Errore nel loop NFC: {e}")
+            print(f"[NFC] Iterazioni completate prima dell'errore: {iteration_count}")
     
     def simulate_badge_read(self, badge_id=None):
         """

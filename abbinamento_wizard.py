@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 """
 Wizard touch per abbinare dipendenti e badge NFC:
-1) Codice dipendente → 2) Nominativo → 3) Badge NFC (con pulsante Abilita Lettura)
+1) Codice dipendente → 2) Nominativo →    def _render_step_codice(self):
+        print(f"[DEBUG] _render_step_codice chiamato")
+            tk.Label(self.container, text="Codice dipendente", font=('Segoe UI', self._s(24), 'bold'), bg='#FFFFFF', fg='#333').pack(anchor='w', pady=(0, self._s(4)))) Badge NFC (con pulsante Abilita Lettura)
 Requisiti: pulsante Annulla solo in alto a destra; Annulla chiude subito.
 """
 
 import tkinter as tk
 import winsound
 import os
+import time
 import sys
 import subprocess
 try:
@@ -42,6 +45,7 @@ class AbbinamentoWizard(tk.Toplevel):
         self._osk_uppercase = True
         self._osk_frame = None
         self._kb_spacer = None  # spacer in basso per non coprire i campi con la tastiera
+        self._kb_opening = False  # flag per evitare chiamate multiple
 
         # Fullscreen + scorciatoie
         try:
@@ -72,6 +76,13 @@ class AbbinamentoWizard(tk.Toplevel):
         # Tastiera virtuale Windows
         self._touch_kb_enabled = sys.platform.startswith('win')
         self._kb_last_try_ok = False
+
+    def _open_virtual_keyboard(self):
+        """Apre la tastiera virtuale di Windows"""
+        try:
+            subprocess.Popen(['cmd', '/c', 'start', 'ms-inputapp:'], shell=True)
+        except Exception:
+            pass
 
         # Build UI e schema
         self._build_ui()
@@ -119,6 +130,7 @@ class AbbinamentoWizard(tk.Toplevel):
             w.destroy()
 
     def _render_step(self):
+        print(f"[DEBUG] _render_step chiamato, step={self.step}")
         self._clear_container()
         if self.step == 1:
             self.status.config(text="Step 1 di 3 · Inserisci codice dipendente")
@@ -133,23 +145,18 @@ class AbbinamentoWizard(tk.Toplevel):
     # --- Step 1 ---
     def _render_step_codice(self):
             tk.Label(self.container, text="Codice dipendente (max 10 cifre)", font=('Segoe UI', self._s(24), 'bold'), bg='#FFFFFF', fg='#333').pack(anchor='w', pady=(0, self._s(6)))
-            entry = tk.Entry(self.container, textvariable=self.codice_var, font=('Consolas', self._s(28)), bd=2, relief='solid')
+            entry = tk.Entry(self.container, textvariable=self.codice_var, font=('Consolas', self._s(28)), 
+                           bd=3, relief='solid', highlightthickness=2, highlightcolor='#20B2AA', 
+                           highlightbackground='#CCCCCC', insertbackground='#333333')
             entry.pack(fill='x', ipady=self._s(16))
             entry.focus_set()
             entry.bind('<Return>', lambda e: self._go_step2())
             # Filtra automaticamente caratteri non numerici
             try:
                 entry.bind('<KeyRelease>', lambda e: self.codice_var.set(''.join(ch for ch in self.codice_var.get() if ch.isdigit())[:10]))
+                entry.bind('<Button-1>', lambda e: self._open_virtual_keyboard())
             except Exception:
                 pass
-            if self._touch_kb_enabled:
-                try:
-                    entry.bind('<FocusIn>', lambda e: self._ensure_touch_keyboard())
-                    entry.bind('<FocusIn>', lambda e: self.after(200, self._reserve_keyboard_space))
-                    entry.bind('<FocusOut>', lambda e: self.after(100, self._release_keyboard_space))
-                    entry.bind('<Button-1>', lambda e: self._ensure_touch_keyboard())
-                except Exception:
-                    pass
 
             self._error_lbl = tk.Label(self.container, text="", font=('Segoe UI', self._s(12)), fg='#E91E63', bg='#FFFFFF')
             self._error_lbl.pack(pady=(self._s(4), 0))
@@ -160,32 +167,22 @@ class AbbinamentoWizard(tk.Toplevel):
     # --- Step 2 ---
     def _render_step_nominativo(self):
             tk.Label(self.container, text="Nome", font=('Segoe UI', self._s(24), 'bold'), bg='#FFFFFF', fg='#333').pack(anchor='w', pady=(0, self._s(4)))
-            entry_nome = tk.Entry(self.container, textvariable=self.nome_var, font=('Segoe UI', self._s(26)), bd=2, relief='solid')
+            entry_nome = tk.Entry(self.container, textvariable=self.nome_var, font=('Segoe UI', self._s(26)), 
+                                bd=3, relief='solid', highlightthickness=2, highlightcolor='#20B2AA', 
+                                highlightbackground='#CCCCCC', insertbackground='#333333')
             entry_nome.pack(fill='x', ipady=self._s(16))
             entry_nome.focus_set()
             entry_nome.bind('<Return>', lambda e: self._save_anagrafica())
             entry_nome.bind('<FocusIn>', lambda e: self._set_active_var(self.nome_var))
-            if self._touch_kb_enabled:
-                try:
-                    entry_nome.bind('<FocusIn>', lambda e: (self._set_active_var(self.nome_var), self._ensure_touch_keyboard()))
-                    entry_nome.bind('<FocusIn>', lambda e: self.after(200, self._reserve_keyboard_space))
-                    entry_nome.bind('<FocusOut>', lambda e: self.after(100, self._release_keyboard_space))
-                    entry_nome.bind('<Button-1>', lambda e: self._ensure_touch_keyboard())
-                except Exception:
-                    pass
+            entry_nome.bind('<Button-1>', lambda e: self._open_virtual_keyboard())
 
             tk.Label(self.container, text="Cognome (opzionale)", font=('Segoe UI', self._s(24), 'bold'), bg='#FFFFFF', fg='#333').pack(anchor='w', pady=(self._s(8), self._s(4)))
-            entry_cognome = tk.Entry(self.container, textvariable=self.cognome_var, font=('Segoe UI', self._s(26)), bd=2, relief='solid')
+            entry_cognome = tk.Entry(self.container, textvariable=self.cognome_var, font=('Segoe UI', self._s(26)), 
+                                   bd=3, relief='solid', highlightthickness=2, highlightcolor='#20B2AA', 
+                                   highlightbackground='#CCCCCC', insertbackground='#333333')
             entry_cognome.pack(fill='x', ipady=self._s(16))
             entry_cognome.bind('<FocusIn>', lambda e: self._set_active_var(self.cognome_var))
-            if self._touch_kb_enabled:
-                try:
-                    entry_cognome.bind('<FocusIn>', lambda e: (self._set_active_var(self.cognome_var), self._ensure_touch_keyboard()))
-                    entry_cognome.bind('<FocusIn>', lambda e: self.after(200, self._reserve_keyboard_space))
-                    entry_cognome.bind('<FocusOut>', lambda e: self.after(100, self._release_keyboard_space))
-                    entry_cognome.bind('<Button-1>', lambda e: self._ensure_touch_keyboard())
-                except Exception:
-                    pass
+            entry_cognome.bind('<Button-1>', lambda e: self._open_virtual_keyboard())
 
             self._active_text_var = self.nome_var
             # Su Windows usa la tastiera di sistema; altrove mostra l'OSK interno
@@ -208,18 +205,13 @@ class AbbinamentoWizard(tk.Toplevel):
 
             row = tk.Frame(self.container, bg='#FFFFFF')
             row.pack(fill='x')
-            entry_badge = tk.Entry(row, textvariable=self.badge_var, font=('Consolas', self._s(28)), bd=2, relief='solid')
+            entry_badge = tk.Entry(row, textvariable=self.badge_var, font=('Consolas', self._s(28)), 
+                                 bd=3, relief='solid', highlightthickness=2, highlightcolor='#20B2AA', 
+                                 highlightbackground='#CCCCCC', insertbackground='#333333')
             entry_badge.pack(side='left', fill='x', expand=True, ipady=self._s(16))
             self._entry_badge = entry_badge
             entry_badge.bind('<Return>', lambda e: self._on_badge(self.badge_var.get().strip()))
-            if self._touch_kb_enabled:
-                try:
-                    entry_badge.bind('<FocusIn>', lambda e: self._ensure_touch_keyboard())
-                    entry_badge.bind('<FocusIn>', lambda e: self.after(200, self._reserve_keyboard_space))
-                    entry_badge.bind('<FocusOut>', lambda e: self.after(100, self._release_keyboard_space))
-                    entry_badge.bind('<Button-1>', lambda e: self._ensure_touch_keyboard())
-                except Exception:
-                    pass
+            entry_badge.bind('<Button-1>', lambda e: self._open_virtual_keyboard())
 
             tk.Button(row, text="Abilita Lettura", font=('Segoe UI', self._s(20), 'bold'), bg='#E91E63', fg='white', command=self._start_reading).pack(side='left', padx=self._s(10), ipadx=self._s(18), ipady=self._s(12))
 
@@ -561,7 +553,35 @@ CREATE INDEX IF NOT EXISTS idx_dipendenti_badge ON dipendenti(badge_id);
             pass
 
     # --- Touch keyboard helpers (Windows) ---
-    def _ensure_touch_keyboard(self):
+    def _open_virtual_keyboard(self):
+        """Apre la tastiera virtuale solo quando l'utente clicca su un campo."""
+        if not self._touch_kb_enabled:
+            return
+            
+        # Evita aperture multiple ravvicinate
+        now = time.time()
+        if hasattr(self, '_last_keyboard_open') and now - self._last_keyboard_open < 1.0:
+            return
+        self._last_keyboard_open = now
+        
+        print("[DEBUG] Apertura tastiera virtuale su richiesta utente...")
+        
+        try:
+            import subprocess
+            # Metodo diretto e affidabile
+            subprocess.Popen(['cmd', '/c', 'start', '', 'ms-inputapp:'], 
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
+                           creationflags=0x08000000)
+            print("[DEBUG] Tastiera virtuale aperta")
+        except Exception as e:
+            print(f"[DEBUG] Errore apertura tastiera: {e}")
+            # Fallback a TabTip.exe
+            try:
+                subprocess.Popen(['tabtip.exe'], stdout=subprocess.DEVNULL, 
+                               stderr=subprocess.DEVNULL, creationflags=0x08000000)
+                print("[DEBUG] Fallback TabTip.exe riuscito")
+            except:
+                pass
         if not self._touch_kb_enabled:
             return
         try:
@@ -710,44 +730,45 @@ CREATE INDEX IF NOT EXISTS idx_dipendenti_badge ON dipendenti(badge_id);
         """Chiude/nasconde la tastiera di sistema se presente (TabTip/OSK) e rilascia lo spacer."""
         if not self._touch_kb_enabled:
             return
+            
+        print("[DEBUG] Chiusura tastiera virtuale sicura...")
+        
         try:
+            # Cancella operazioni pending
+            if hasattr(self, '_kb_pending_job'):
+                self.after_cancel(self._kb_pending_job)
+            self._kb_opening = False  # Reset flag
+        except:
+            pass
+            
+        try:
+            import subprocess
+            # Metodo gentile - chiude TabTip senza forzare
+            subprocess.run(['taskkill', '/IM', 'TabTip.exe', '/F'], 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+            print("[DEBUG] TabTip chiuso")
+        except Exception as e:
+            print(f"[DEBUG] Errore chiusura TabTip: {e}")
+            
+        try:
+            # Chiusura classica per OSK se presente
             user32 = ctypes.windll.user32
-            WM_SYSCOMMAND = 0x0112
-            SC_CLOSE = 0xF060
             WM_CLOSE = 0x0010
-            SW_HIDE = 0
             classes = ['IPTip_Main_Window', 'OSKMainClass']
             for cls in classes:
                 try:
                     hwnd = user32.FindWindowW(cls, None)
-                except Exception:
-                    hwnd = 0
-                if hwnd:
-                    try:
-                        user32.PostMessageW(hwnd, WM_SYSCOMMAND, SC_CLOSE, 0)
-                    except Exception:
-                        pass
-                    try:
+                    if hwnd:
                         user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
-                    except Exception:
-                        pass
-                    try:
-                        user32.ShowWindow(hwnd, SW_HIDE)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        # Evita di forzare la chiusura di TabTip.exe; per OSK fai best-effort kill se rimane
-        try:
-            subprocess.Popen(['taskkill', '/IM', 'osk.exe', '/F'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x08000000)
-        except Exception:
-            pass
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[DEBUG] Errore chiusura finestre tastiera: {e}")
+            
+        # Rilascia spazio keyboard con delay
         try:
             self._kb_last_try_ok = False
-        except Exception:
-            pass
-        try:
-            self.after(50, self._release_keyboard_space)
+            self.after(100, self._release_keyboard_space)
         except Exception:
             pass
 
