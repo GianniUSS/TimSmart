@@ -1197,11 +1197,23 @@ class TigotaEliteDashboard:
                      padx=s(20), pady=s(12)).pack(side='left')  # Aggiunto padding
             
             def go_step2():
+                print("[DEBUG] Passaggio allo step 2 - chiudendo tastiera...")
+                # Chiudi la tastiera completamente prima di cambiare step
+                try:
+                    if hasattr(self, '_custom_keyboard') and self._custom_keyboard:
+                        self._custom_keyboard.hide()  # Metodo corretto!
+                        print("[DEBUG] Tastiera nascosta dal manager")
+                        # Pausa breve per assicurarsi che si chiuda
+                        win.update()
+                except Exception as e:
+                    print(f"[DEBUG] Errore chiusura tastiera: {e}")
+                
                 if not codice_var.get().strip():
                     error_label.config(text="Inserisci un codice valido")
                     winsound.Beep(800, 200)
                     return
                 error_label.config(text="")
+                print("[DEBUG] Passando al render dello step 2...")
                 render_step2()
             
             # Pulsante Avanti ingrandito
@@ -1220,33 +1232,88 @@ class TigotaEliteDashboard:
                                 bd=2, relief='solid', highlightthickness=1, highlightcolor='#20B2AA')
             nome_entry.pack(fill='x', ipady=s(8), pady=(0, s(6)))  # Spazio ridotto
             nome_entry.focus_set()
-            nome_entry.bind('<FocusIn>', lambda e: print(f"[DEBUG] Campo ricevuto focus: {e.widget.winfo_name()}"))
             nome_entry.bind('<Button-1>', show_keyboard_for_field)
+            # Binding ottimizzato per aggiornare tastiera senza flickering
+            def nome_focus_in(event):
+                print(f"[DEBUG] Campo nome ricevuto focus: {event.widget.winfo_name()}")
+                # Se la tastiera è già aperta, aggiorna solo il target senza riaprirla
+                try:
+                    if (hasattr(self, '_custom_keyboard') and self._custom_keyboard and 
+                        hasattr(self._custom_keyboard, 'keyboard') and self._custom_keyboard.keyboard and 
+                        self._custom_keyboard.keyboard.winfo_exists()):
+                        # Tastiera già aperta, aggiorna solo il target widget
+                        current_target = getattr(self._custom_keyboard, 'target_widget', None)
+                        if current_target != event.widget:
+                            print("[DEBUG] Aggiornando target tastiera per campo nome (senza riaprire)")
+                            if hasattr(self._custom_keyboard, 'set_target_widget'):
+                                self._custom_keyboard.set_target_widget(event.widget)
+                            elif hasattr(self._custom_keyboard, 'target_widget'):
+                                self._custom_keyboard.target_widget = event.widget
+                except Exception as e:
+                    print(f"[DEBUG] Errore aggiornamento target tastiera nome: {e}")
+            nome_entry.bind('<FocusIn>', nome_focus_in)
             
             # Cognome - Spazi ottimizzati
             tk.Label(main_container, text="Cognome (opzionale):", font=('Segoe UI', s(16), 'bold'), bg='#FFFFFF', fg='#333333').pack(anchor='w', pady=(s(3), s(1)))
             cognome_entry = tk.Entry(main_container, textvariable=cognome_var, font=('Segoe UI', s(18)), 
                                    bd=2, relief='solid', highlightthickness=1, highlightcolor='#20B2AA')
             cognome_entry.pack(fill='x', ipady=s(8), pady=(0, s(6)))  # Spazio ridotto
-            cognome_entry.bind('<FocusIn>', lambda e: print(f"[DEBUG] Campo ricevuto focus: {e.widget.winfo_name()}"))
             cognome_entry.bind('<Button-1>', show_keyboard_for_field)
+            # Binding ottimizzato per aggiornare tastiera senza flickering
+            def cognome_focus_in(event):
+                print(f"[DEBUG] Campo cognome ricevuto focus: {event.widget.winfo_name()}")
+                # Se la tastiera è già aperta, aggiorna solo il target senza riaprirla
+                try:
+                    if (hasattr(self, '_custom_keyboard') and self._custom_keyboard and 
+                        hasattr(self._custom_keyboard, 'keyboard') and self._custom_keyboard.keyboard and 
+                        self._custom_keyboard.keyboard.winfo_exists()):
+                        # Tastiera già aperta, aggiorna solo il target widget
+                        current_target = getattr(self._custom_keyboard, 'target_widget', None)
+                        if current_target != event.widget:
+                            print("[DEBUG] Aggiornando target tastiera per campo cognome (senza riaprire)")
+                            if hasattr(self._custom_keyboard, 'set_target_widget'):
+                                self._custom_keyboard.set_target_widget(event.widget)
+                            elif hasattr(self._custom_keyboard, 'target_widget'):
+                                self._custom_keyboard.target_widget = event.widget
+                except Exception as e:
+                    print(f"[DEBUG] Errore aggiornamento target tastiera cognome: {e}")
+            cognome_entry.bind('<FocusIn>', cognome_focus_in)
             
             # Buttons ingranditi per tablet - Spazio ottimizzato
             btn_frame = tk.Frame(main_container, bg='#FFFFFF')
             btn_frame.pack(fill='x', pady=s(8))  # Spazio ridotto
             
+            def go_back_to_step1():
+                # Chiudi la tastiera prima di cambiare step
+                try:
+                    if hasattr(self, '_custom_keyboard') and self._custom_keyboard:
+                        self._custom_keyboard.hide_keyboard()
+                except Exception:
+                    pass
+                render_step1()
+            
             # Pulsante Indietro ingrandito
             tk.Button(btn_frame, text='‹ Indietro', font=('Segoe UI', s(18), 'bold'),  # Font aumentato da 14 a 18
-                     bg='#F3F4F6', fg='#333333', command=render_step1, 
+                     bg='#F3F4F6', fg='#333333', command=go_back_to_step1, 
                      padx=s(20), pady=s(12)).pack(side='left')  # Aggiunto padding
             
             def save_anagrafica():
+                print("[DEBUG] save_anagrafica chiamato - chiudendo tastiera...")
+                # Chiudi la tastiera in modo semplice e diretto
+                try:
+                    if hasattr(self, '_custom_keyboard') and self._custom_keyboard:
+                        self._custom_keyboard.hide()  # Metodo corretto!
+                        print("[DEBUG] Tastiera chiusa prima dello step 3")
+                except Exception as e:
+                    print(f"[DEBUG] Errore chiusura tastiera: {e}")
+                
                 nome_var.set(nome_var.get().strip().title())
                 cognome_var.set(cognome_var.get().strip().title())
                 if not nome_var.get().strip():
                     winsound.Beep(800, 200)
                     return
                 if db.upsert_dipendente(codice_var.get(), nome_var.get(), cognome_var.get() or None):
+                    print("[DEBUG] Anagrafica salvata, passaggio al step 3...")
                     render_step3()
                 else:
                     winsound.Beep(800, 200)
@@ -1272,7 +1339,32 @@ class TigotaEliteDashboard:
                                  bd=2, relief='solid', highlightthickness=1, highlightcolor='#20B2AA')
             badge_entry.pack(side='left', fill='x', expand=True, ipady=s(8))
             badge_entry.bind('<FocusIn>', lambda e: print(f"[DEBUG] Campo ricevuto focus: {e.widget.winfo_name()}"))
-            badge_entry.bind('<Button-1>', show_keyboard_for_field)
+            
+            # Binding per catturare input diretto da lettore badge USB (modalità tastiera)
+            def on_badge_input_change(*args):
+                """Chiamato quando il campo badge cambia (input da lettore USB)"""
+                badge_value = badge_var.get()
+                if badge_value and len(badge_value) >= 3:  # ID badge valido
+                    print(f"[DEBUG] Badge rilevato da input diretto (lettore USB): {badge_value}")
+                    # Se il lettore è attivo, fermalo dopo la lettura
+                    if getattr(self, 'nfc_reader', None):
+                        self.nfc_reader.stop_reading()
+                        print("[DEBUG] Lettore NFC fermato dopo input diretto")
+            
+            # Monitora cambiamenti nella variabile badge
+            badge_var.trace('w', on_badge_input_change)
+            
+            # Binding personalizzato per permettere focus senza attivare la tastiera
+            def badge_field_click(event):
+                """Gestisce il click sul campo badge: focus senza tastiera"""
+                print(f"[DEBUG] Campo badge cliccato - focus per NFC (senza tastiera)")
+                try:
+                    event.widget.focus_set()  # Imposta il focus per permettere input NFC
+                    print(f"[DEBUG] Focus impostato su campo badge per lettura NFC")
+                except Exception as e:
+                    print(f"[DEBUG] Errore impostazione focus badge: {e}")
+            
+            badge_entry.bind('<Button-1>', badge_field_click)
             
             def enable_nfc_for_wizard():
                 """Abilita la lettura NFC per l'abbinamento badge nel wizard"""
@@ -1281,6 +1373,12 @@ class TigotaEliteDashboard:
                     # Ferma eventuale lettore attivo
                     if getattr(self, 'nfc_reader', None):
                         self.nfc_reader.stop_reading()
+                    
+                    # IMPORTANTE: Imposta il focus sul campo badge per lettori USB/tastiera
+                    print("[DEBUG] Impostando focus automatico sul campo badge per lettore USB...")
+                    badge_entry.focus_set()
+                    badge_entry.focus_force()  # Forza il focus
+                    print("[DEBUG] Focus impostato sul campo badge")
                     
                     # Crea callback specifico per il wizard
                     def on_wizard_badge_read(badge_id):
@@ -1317,9 +1415,18 @@ class TigotaEliteDashboard:
             btn_frame = tk.Frame(main_container, bg='#FFFFFF')
             btn_frame.pack(fill='x', pady=s(15))
             
+            def go_back_to_step2():
+                # Chiudi la tastiera prima di cambiare step
+                try:
+                    if hasattr(self, '_custom_keyboard') and self._custom_keyboard:
+                        self._custom_keyboard.hide_keyboard()
+                except Exception:
+                    pass
+                render_step2()
+            
             # Pulsante Indietro ingrandito
             tk.Button(btn_frame, text='‹ Indietro', font=('Segoe UI', s(18), 'bold'),  # Font aumentato da 14 a 18
-                     bg='#F3F4F6', fg='#333333', command=render_step2,
+                     bg='#F3F4F6', fg='#333333', command=go_back_to_step2,
                      padx=s(20), pady=s(12)).pack(side='left')  # Aggiunto padding
             
             def save_badge():
@@ -1338,15 +1445,116 @@ class TigotaEliteDashboard:
                     return
                 
                 try:
-                    if db.abbina_badge_dipendente(codice_dip, badge_id):
+                    if db.abbina_badge_a_dipendente(codice_dip, badge_id):
                         nome_completo = f"{nome_var.get()} {cognome_var.get() or ''}".strip()
                         print(f"[DEBUG] Badge {badge_id} abbinato con successo a {nome_completo}")
-                        messagebox.showinfo("Successo", f"Badge abbinato a {nome_completo}!")
-                        close_wizard()
+                        
+                        # Msgbox touch-friendly sempre in primo piano
+                        def show_touch_success_msg():
+                            msg_win = tk.Toplevel(win)
+                            msg_win.title("Successo")
+                            msg_win.configure(bg='#FFFFFF')
+                            msg_win.attributes('-topmost', True)
+                            msg_win.transient(win)
+                            msg_win.grab_set()
+                            msg_win.resizable(False, False)
+                            
+                            # Dimensioni touch-friendly
+                            msg_width, msg_height = 480, 280
+                            x = (msg_win.winfo_screenwidth() // 2) - (msg_width // 2)
+                            y = (msg_win.winfo_screenheight() // 2) - (msg_height // 2)
+                            msg_win.geometry(f"{msg_width}x{msg_height}+{x}+{y}")
+                            
+                            # Header verde per successo
+                            header = tk.Frame(msg_win, bg='#20B2AA', height=60)
+                            header.pack(fill='x')
+                            header.pack_propagate(False)
+                            tk.Label(header, text="✓ Successo", font=('Segoe UI', 20, 'bold'), 
+                                   fg='#FFFFFF', bg='#20B2AA').pack(expand=True)
+                            
+                            # Messaggio
+                            body = tk.Frame(msg_win, bg='#FFFFFF')
+                            body.pack(fill='both', expand=True, padx=20, pady=20)
+                            tk.Label(body, text=f"Badge abbinato a\n{nome_completo}!", 
+                                   font=('Segoe UI', 16), fg='#333333', bg='#FFFFFF',
+                                   justify='center').pack(expand=True)
+                            
+                            # Pulsante OK touch-friendly
+                            ok_btn = tk.Button(body, text='OK', font=('Segoe UI', 18, 'bold'),
+                                             bg='#20B2AA', fg='#FFFFFF', relief='flat',
+                                             command=lambda: (msg_win.destroy(), close_wizard()),
+                                             padx=40, pady=15)
+                            ok_btn.pack(pady=10)
+                            
+                            # Sistema per mantenere SEMPRE in primo piano
+                            msg_win.attributes('-topmost', True)
+                            msg_win.lift()
+                            msg_win.focus_force()
+                            ok_btn.focus_set()
+                            
+                            # Timer per rinforzare la priorità ogni 500ms
+                            def keep_on_top():
+                                try:
+                                    if msg_win.winfo_exists():
+                                        msg_win.attributes('-topmost', True)
+                                        msg_win.lift()
+                                        msg_win.after(500, keep_on_top)  # Ripeti ogni 500ms
+                                except:
+                                    pass  # Finestra chiusa
+                            
+                            msg_win.after(500, keep_on_top)  # Avvia il timer
+                        
+                        print("[DEBUG] Mostrando msgbox touch-friendly di successo...")
+                        show_touch_success_msg()
+                        
                     else:
-                        print("[DEBUG] Errore abbinamento badge - db.abbina_badge_dipendente returned False")
+                        print("[DEBUG] Errore abbinamento badge - db.abbina_badge_a_dipendente returned False")
                         winsound.Beep(800, 200)
-                        messagebox.showerror("Errore", "Impossibile abbinare il badge. Riprova.")
+                        
+                        # Msgbox di errore touch-friendly
+                        def show_touch_error_msg():
+                            msg_win = tk.Toplevel(win)
+                            msg_win.title("Errore")
+                            msg_win.configure(bg='#FFFFFF')
+                            msg_win.attributes('-topmost', True)
+                            msg_win.transient(win)
+                            msg_win.grab_set()
+                            msg_win.resizable(False, False)
+                            
+                            # Dimensioni touch-friendly
+                            msg_width, msg_height = 480, 280
+                            x = (msg_win.winfo_screenwidth() // 2) - (msg_width // 2)
+                            y = (msg_win.winfo_screenheight() // 2) - (msg_height // 2)
+                            msg_win.geometry(f"{msg_width}x{msg_height}+{x}+{y}")
+                            
+                            # Header rosso per errore
+                            header = tk.Frame(msg_win, bg='#EF4444', height=60)
+                            header.pack(fill='x')
+                            header.pack_propagate(False)
+                            tk.Label(header, text="✗ Errore", font=('Segoe UI', 20, 'bold'), 
+                                   fg='#FFFFFF', bg='#EF4444').pack(expand=True)
+                            
+                            # Messaggio
+                            body = tk.Frame(msg_win, bg='#FFFFFF')
+                            body.pack(fill='both', expand=True, padx=20, pady=20)
+                            tk.Label(body, text="Impossibile abbinare\nil badge. Riprova.", 
+                                   font=('Segoe UI', 16), fg='#333333', bg='#FFFFFF',
+                                   justify='center').pack(expand=True)
+                            
+                            # Pulsante OK touch-friendly
+                            ok_btn = tk.Button(body, text='OK', font=('Segoe UI', 18, 'bold'),
+                                             bg='#EF4444', fg='#FFFFFF', relief='flat',
+                                             command=msg_win.destroy,
+                                             padx=40, pady=15)
+                            ok_btn.pack(pady=10)
+                            
+                            # Mantieni in primo piano
+                            msg_win.lift()
+                            msg_win.focus_force()
+                            ok_btn.focus_set()
+                        
+                        print("[DEBUG] Mostrando msgbox touch-friendly di errore...")
+                        show_touch_error_msg()
                 except Exception as e:
                     print(f"[DEBUG] Eccezione durante abbinamento badge: {e}")
                     winsound.Beep(800, 200)
@@ -2312,16 +2520,152 @@ class TigotaEliteDashboard:
                 
                 # Validazione base
                 if not seat_code or not shop_code:
-                    messagebox.showerror("Errore", "I campi 'Codice Sede' e 'Codice Negozio' sono obbligatori.")
+                    # Msgbox touch-friendly per errore
+                    def show_touch_error_msg():
+                        msg_win = tk.Toplevel(win)
+                        msg_win.title("Errore")
+                        msg_win.configure(bg='#FFFFFF')
+                        msg_win.attributes('-topmost', True)
+                        msg_win.transient(win)
+                        msg_win.grab_set()
+                        msg_win.resizable(False, False)
+                        
+                        # Dimensioni touch-friendly
+                        msg_width, msg_height = 480, 280
+                        x = (msg_win.winfo_screenwidth() // 2) - (msg_width // 2)
+                        y = (msg_win.winfo_screenheight() // 2) - (msg_height // 2)
+                        msg_win.geometry(f"{msg_width}x{msg_height}+{x}+{y}")
+                        
+                        # Header rosso per errore
+                        header = tk.Frame(msg_win, bg='#DC3545', height=60)
+                        header.pack(fill='x')
+                        header.pack_propagate(False)
+                        tk.Label(header, text="⚠ Errore", font=('Segoe UI', 20, 'bold'), 
+                               fg='#FFFFFF', bg='#DC3545').pack(expand=True)
+                        
+                        # Messaggio
+                        body = tk.Frame(msg_win, bg='#FFFFFF')
+                        body.pack(fill='both', expand=True, padx=20, pady=20)
+                        tk.Label(body, text="I campi 'Codice Sede' e\n'Codice Negozio' sono obbligatori.", 
+                               font=('Segoe UI', 16), fg='#333333', bg='#FFFFFF',
+                               justify='center').pack(expand=True)
+                        
+                        # Pulsante OK touch-friendly
+                        ok_btn = tk.Button(body, text='OK', font=('Segoe UI', 18, 'bold'),
+                                         bg='#DC3545', fg='#FFFFFF', relief='flat',
+                                         command=msg_win.destroy,
+                                         padx=40, pady=15)
+                        ok_btn.pack(pady=10)
+                        
+                        # Mantieni in primo piano
+                        msg_win.lift()
+                        msg_win.focus_force()
+                    
+                    show_touch_error_msg()
                     return
                 
                 # Salva configurazione
                 if _save_codes(seat_code, shop_code, transfer_time, transfer_folder):
                     print(f"[CFG] Configurazione salvata: Sede={seat_code}, Negozio={shop_code}, Ora={transfer_time}")
-                    messagebox.showinfo("Successo", "Configurazione salvata correttamente!")
-                    safe_close()  # Usa chiusura sicura invece di win.destroy()
+                    
+                    # Msgbox touch-friendly per successo
+                    def show_touch_success_msg():
+                        msg_win = tk.Toplevel(win)
+                        msg_win.title("Successo")
+                        msg_win.configure(bg='#FFFFFF')
+                        msg_win.attributes('-topmost', True)
+                        msg_win.transient(win)
+                        msg_win.grab_set()
+                        msg_win.resizable(False, False)
+                        
+                        # Dimensioni touch-friendly
+                        msg_width, msg_height = 480, 280
+                        x = (msg_win.winfo_screenwidth() // 2) - (msg_width // 2)
+                        y = (msg_win.winfo_screenheight() // 2) - (msg_height // 2)
+                        msg_win.geometry(f"{msg_width}x{msg_height}+{x}+{y}")
+                        
+                        # Header verde per successo
+                        header = tk.Frame(msg_win, bg='#20B2AA', height=60)
+                        header.pack(fill='x')
+                        header.pack_propagate(False)
+                        tk.Label(header, text="✓ Successo", font=('Segoe UI', 20, 'bold'), 
+                               fg='#FFFFFF', bg='#20B2AA').pack(expand=True)
+                        
+                        # Messaggio
+                        body = tk.Frame(msg_win, bg='#FFFFFF')
+                        body.pack(fill='both', expand=True, padx=20, pady=20)
+                        tk.Label(body, text="Configurazione salvata\ncorrettamente!", 
+                               font=('Segoe UI', 16), fg='#333333', bg='#FFFFFF',
+                               justify='center').pack(expand=True)
+                        
+                        # Pulsante OK touch-friendly
+                        ok_btn = tk.Button(body, text='OK', font=('Segoe UI', 18, 'bold'),
+                                         bg='#20B2AA', fg='#FFFFFF', relief='flat',
+                                         command=lambda: (msg_win.destroy(), safe_close()),
+                                         padx=40, pady=15)
+                        ok_btn.pack(pady=10)
+                        
+                        # Sistema per mantenere SEMPRE in primo piano
+                        msg_win.attributes('-topmost', True)
+                        msg_win.lift()
+                        msg_win.focus_force()
+                        
+                        # Timer per rinforzare la priorità ogni 500ms
+                        def keep_on_top():
+                            try:
+                                if msg_win.winfo_exists():
+                                    msg_win.attributes('-topmost', True)
+                                    msg_win.lift()
+                                    msg_win.after(500, keep_on_top)  # Ripeti ogni 500ms
+                            except:
+                                pass  # Finestra chiusa
+                        
+                        msg_win.after(500, keep_on_top)  # Avvia il timer
+                    
+                    show_touch_success_msg()
                 else:
-                    messagebox.showerror("Errore", "Errore durante il salvataggio della configurazione.")
+                    # Msgbox touch-friendly per errore salvataggio
+                    def show_touch_save_error_msg():
+                        msg_win = tk.Toplevel(win)
+                        msg_win.title("Errore")
+                        msg_win.configure(bg='#FFFFFF')
+                        msg_win.attributes('-topmost', True)
+                        msg_win.transient(win)
+                        msg_win.grab_set()
+                        msg_win.resizable(False, False)
+                        
+                        # Dimensioni touch-friendly
+                        msg_width, msg_height = 480, 280
+                        x = (msg_win.winfo_screenwidth() // 2) - (msg_width // 2)
+                        y = (msg_win.winfo_screenheight() // 2) - (msg_height // 2)
+                        msg_win.geometry(f"{msg_width}x{msg_height}+{x}+{y}")
+                        
+                        # Header rosso per errore
+                        header = tk.Frame(msg_win, bg='#DC3545', height=60)
+                        header.pack(fill='x')
+                        header.pack_propagate(False)
+                        tk.Label(header, text="⚠ Errore", font=('Segoe UI', 20, 'bold'), 
+                               fg='#FFFFFF', bg='#DC3545').pack(expand=True)
+                        
+                        # Messaggio
+                        body = tk.Frame(msg_win, bg='#FFFFFF')
+                        body.pack(fill='both', expand=True, padx=20, pady=20)
+                        tk.Label(body, text="Errore durante il salvataggio\ndella configurazione.", 
+                               font=('Segoe UI', 16), fg='#333333', bg='#FFFFFF',
+                               justify='center').pack(expand=True)
+                        
+                        # Pulsante OK touch-friendly
+                        ok_btn = tk.Button(body, text='OK', font=('Segoe UI', 18, 'bold'),
+                                         bg='#DC3545', fg='#FFFFFF', relief='flat',
+                                         command=msg_win.destroy,
+                                         padx=40, pady=15)
+                        ok_btn.pack(pady=10)
+                        
+                        # Mantieni in primo piano
+                        msg_win.lift()
+                        msg_win.focus_force()
+                    
+                    show_touch_save_error_msg()
 
             save_btn = tk.Button(buttons_frame, text='Salva', font=btn_font, command=save_and_close,
                                bg='#5FA8AF', fg='white', padx=self.s(24), pady=self.s(12))
@@ -3475,6 +3819,7 @@ class TigotaEliteDashboard:
         # Nota: rimosso testo "NFC" su richiesta, resta solo il logo
         
         # Posiziona il container in modo assoluto in basso a destra
+        nfc_container.place(relx=1.0, rely=1.0, anchor='se', x=-self.s(20), y=-self.s(20))
 
     def debug_settings_icon(self):
         """Placeholder per debug dell'icona impostazioni, evita AttributeError se invocato."""
@@ -3790,20 +4135,21 @@ class TigotaEliteDashboard:
         return self.feedback_toast_ms
 
     def _show_tigota_toast(self, kind, text, duration_ms=None, name=None):
-        """Mostra un toast stile TIGOT? (borderless, topmost), ancora pi? grande, con saluto opzionale e bordo Uscita."""
+        """Mostra una notifica di feedback coerente con lo stile dell'app."""
         if not hasattr(self, 'root') or not self.root:
             return
         dur = duration_ms if isinstance(duration_ms, int) and duration_ms > 0 else self._get_feedback_duration_ms()
-        # Palette
-        ok_bg = '#20B2AA'   # success
-        warn = '#F59E0B'
-        err = '#E91E63'
-        header_bg = ok_bg if kind == 'success' else (warn if kind == 'warning' else err)
-        body_bg = '#FFFFFF'
-        fg = '#FFFFFF'
+        
+        # Colori coerenti con l'app - Badge non registrato = stesso colore di operazione riuscita
+        if kind == 'success' or kind == 'warning':  # Badge non registrato usa lo stesso stile di successo
+            header_bg = '#20B2AA'  # Verde acqua per successo E badge non registrato
+        else:  # error
+            header_bg = '#E91E63'  # Rosso per errore
 
-        # Finestra
+        # Finestra toast
         toast = tk.Toplevel(self.root)
+        toast.title("SmartTIM")
+        toast.configure(bg='#FFFFFF')
         try:
             toast.overrideredirect(True)
         except Exception:
@@ -3812,40 +4158,67 @@ class TigotaEliteDashboard:
             toast.attributes('-topmost', True)
         except Exception:
             pass
-
-        # Bordi con colore pulsante Uscita
-        uscita_border = '#E91E63'
-        toast.configure(bg=uscita_border)
+        toast.resizable(False, False)
 
         s = self.s
-        # Card interna con padding (bordo visibile tutto intorno)
-        container = tk.Frame(toast, bg=body_bg, bd=0, highlightthickness=0)
-        container.pack(fill='both', expand=True, padx=s(12), pady=s(12))
-
-        header = tk.Frame(container, bg=header_bg, bd=0, highlightthickness=0)
+        # Dimensioni ancora più grandi per massima chiarezza
+        toast_width, toast_height = s(650), s(280)
+        
+        # Header con colore dell'azione (ancora più alto per maggiore impatto)
+        header = tk.Frame(toast, bg=header_bg, height=s(80))  # Header molto più alto
         header.pack(fill='x')
-        tk.Label(header, text='TIGOT?', font=('Segoe UI', s(34), 'bold'), fg=fg, bg=header_bg, padx=s(28), pady=s(16)).pack(anchor='w')
-
-        body = tk.Frame(container, bg=body_bg)
-        body.pack(fill='both', expand=True, padx=s(36), pady=s(26))
+        header.pack_propagate(False)
+        
+        # Titolo nell'header (font molto più grande e chiaro)
+        if kind == 'success':
+            title_text = "✓ Operazione Completata"
+        elif kind == 'warning':
+            title_text = "⚠ Badge Non Registrato"  # Stesso stile di successo
+        else:
+            title_text = "✗ Errore"
+            
+        tk.Label(header, text=title_text, font=('Segoe UI', s(22), 'bold'),  # Font molto più grande
+                fg='#FFFFFF', bg=header_bg).pack(expand=True)
+        
+        # Body con sfondo bianco (spazio molto maggiore)
+        body = tk.Frame(toast, bg='#FFFFFF')
+        body.pack(fill='both', expand=True, padx=s(35), pady=s(35))  # Padding molto maggiore
+        
+        # Nome personalizzato se fornito (font molto più grande)
         if name:
-            tk.Label(body, text=f"Ciao {name}", font=('Segoe UI', s(42), 'bold'), fg='#111827', bg=body_bg).pack(pady=(0, s(8)))
-        tk.Label(body, text=text, font=('Segoe UI', s(30), 'bold'), fg='#374151', bg=body_bg).pack()
+            tk.Label(body, text=f"Ciao {name}!", font=('Segoe UI', s(20), 'bold'),  # Font molto più grande
+                    fg='#333333', bg='#FFFFFF').pack(pady=(0, s(18)))  # Spaziatura molto maggiore
+        
+        # Messaggio principale (font molto più grande e chiaro)
+        tk.Label(body, text=text, font=('Segoe UI', s(16), 'bold'),  # Font più grande E grassetto per chiarezza
+                fg='#333333', bg='#FFFFFF', justify='center').pack()  # Colore più scuro per maggiore contrasto
 
-        # Centro schermo
+        # Posizionamento al centro (stesso sistema delle altre dialog)
         try:
             toast.update_idletasks()
-            rw = max(800, self.root.winfo_width())
-            w = max(int(rw * 0.65), s(800), toast.winfo_width())
-            h = toast.winfo_height()
-            rx = self.root.winfo_rootx(); ry = self.root.winfo_rooty()
+            rw = self.root.winfo_width()
             rh = self.root.winfo_height()
-            x = rx + (rw - w)//2
-            y = ry + (rh - h)//2
+            rx = self.root.winfo_rootx()
+            ry = self.root.winfo_rooty()
+            
+            w = toast_width
+            h = toast.winfo_reqheight()
+            x = rx + (rw - w) // 2
+            y = ry + (rh - h) // 2
+            
             toast.geometry(f"{w}x{h}+{max(0,x)}+{max(0,y)}")
         except Exception:
             pass
-        toast.after(dur, lambda: toast.destroy() if toast.winfo_exists() else None)
+            
+        # Timer per chiusura automatica
+        def close_toast():
+            try:
+                if toast.winfo_exists():
+                    toast.destroy()
+            except:
+                pass
+                
+        toast.after(dur, close_toast)
 
     def _post_timbratura_cleanup(self):
         """Dopo una timbratura, richiede una nuova selezione azzerando lo stato e lasciando la lettura NFC disabilitata."""
